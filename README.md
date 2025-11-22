@@ -1,4 +1,4 @@
-# Patience - Chat Bot Testing System
+# Patience - The Chat Bot Testing System
 
 A comprehensive testing framework for automated validation of conversational AI systems. Patience simulates realistic user interactions to validate chat bot behavior, responses, and edge case handling.
 
