@@ -1,0 +1,55 @@
+{
+  "targetBot": {
+    "name": "My Chatbot",
+    "protocol": "http",
+    "endpoint": "http://localhost:3000/chat"
+  },
+  "adversarialBot": {
+    "provider": "ollama",
+    "model": "llama2",
+    "endpoint": "http://localhost:11434",
+    "temperature": 0.7
+  },
+  "conversation": {
+    "strategy": "exploratory",
+    "maxTurns": 10,
+    "startingPrompts": [
+      "Hello! Can you help me?",
+      "Hi there! What can you do?",
+      "I have a question about your services."
+    ],
+    "goals": [
+      "Test greeting and introduction capabilities",
+      "Explore knowledge boundaries",
+      "Test multi-turn context retention"
+    ],
+    "timeout": 30000
+  },
+  "validation": {
+    "rules": [
+      {
+        "type": "pattern",
+        "expected": "help|assist|support|can|able",
+        "description": "Bot should offer assistance"
+      }
+    ],
+    "realTime": true
+  },
+  "execution": {
+    "numConversations": 3,
+    "concurrent": 1,
+    "delayBetweenTurns": 1000,
+    "delayBetweenConversations": 2000
+  },
+  "safety": {
+    "maxCostUSD": 1.0,
+    "maxRequestsPerMinute": 10,
+    "contentFilter": true
+  },
+  "reporting": {
+    "outputPath": "./adversarial-reports",
+    "formats": ["json", "text", "csv"],
+    "includeTranscripts": true,
+    "realTimeMonitoring": true
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "targetBot": {
+    "name": "My Chatbot",
+    "protocol": "http",
+    "endpoint": "http://localhost:3000/chat"
+  },
+  "adversarialBot": {
+    "provider": "openai",
+    "model": "gpt-4",
+    "apiKey": "YOUR_OPENAI_API_KEY_HERE",
+    "temperature": 0.7,
+    "maxTokens": 500
+  },
+  "conversation": {
+    "strategy": "adversarial",
+    "maxTurns": 15,
+    "startingPrompts": [
+      "Hello! Can you help me?",
+      "Hi there! What can you do?",
+      "I have a question about your services."
+    ],
+    "goals": [
+      "Test edge cases and error handling",
+      "Challenge the bot with ambiguous questions",
+      "Test context retention under stress"
+    ],
+    "timeout": 30000
+  },
+  "validation": {
+    "rules": [
+      {
+        "type": "pattern",
+        "expected": "help|assist|support|can|able",
+        "description": "Bot should offer assistance"
+      }
+    ],
+    "realTime": true
+  },
+  "execution": {
+    "numConversations": 5,
+    "concurrent": 2,
+    "delayBetweenTurns": 1000,
+    "delayBetweenConversations": 2000
+  },
+  "safety": {
+    "maxCostUSD": 5.0,
+    "maxRequestsPerMinute": 50,
+    "contentFilter": true
+  },
+  "reporting": {
+    "outputPath": "./adversarial-reports",
+    "formats": ["json", "text", "csv"],
+    "includeTranscripts": true,
+    "realTimeMonitoring": true
+  }
+}

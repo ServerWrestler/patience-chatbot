@@ -7,6 +7,8 @@
 import { ConfigurationManager } from './config/ConfigurationManager';
 import { TestExecutor } from './execution/TestExecutor';
 import { ReportGenerator } from './reporting/ReportGenerator';
+import { analyzeCommand } from './cli-analyze';
+import { runAdversarialCommand } from './cli-adversarial';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -52,26 +54,50 @@ function showHelp(): void {
 Patience - Chat Bot Testing System
 
 Usage:
-  patience [options] <config-file>
+  patience [command] [options]
 
-Options:
+Commands:
+  test [options] <config-file>       Run live bot tests (default)
+  analyze [options] <log-file>       Analyze historical chat logs
+  adversarial [options]              Run adversarial bot-to-bot testing
+
+Test Options:
   -c, --config <file>    Path to configuration file (JSON or YAML)
   -o, --output <path>    Output directory for reports (default: ./reports)
   -f, --format <format>  Report format: json, html, markdown (default: json)
   -h, --help             Show this help message
 
-Examples:
-  patience config.json
-  patience --config test-config.yaml --output ./test-reports --format html
-  patience -c config.json -o reports -f markdown
+Analyze Options:
+  -l, --log <file>           Path to log file to analyze
+  -c, --config <file>        Path to analysis configuration file
+  -f, --format <format>      Log format: json, csv, text, auto (default: auto)
+  -o, --output <path>        Output directory for reports (default: ./analysis-reports)
+  -r, --report-format <fmt>  Report format: json, html, markdown, csv (default: html)
+  -h, --help                 Show this help message
 
-Configuration File:
-  The configuration file should contain:
-  - targetBot: Bot connection details (protocol, endpoint, auth)
-  - scenarios: Test scenarios to execute
-  - validation: Validation settings
-  - timing: Delay and timeout configuration
-  - reporting: Report generation settings
+Adversarial Options:
+  -c, --config <file>         Path to configuration file (JSON)
+  -t, --target <url>          Target bot endpoint
+  -a, --adversary <provider>  Adversarial bot provider: ollama, openai, anthropic
+  -m, --model <model>         Model name (e.g., llama2, gpt-4)
+  -s, --strategy <strategy>   Testing strategy: exploratory, adversarial, focused, stress
+  --turns <number>            Maximum turns per conversation
+  --conversations <number>    Number of conversations to run
+  -o, --output <path>         Output directory for reports
+  -h, --help                  Show this help message
+
+Examples:
+  # Run live tests
+  patience test config.json
+  patience config.json
+
+  # Analyze historical logs
+  patience analyze conversations.json
+  patience analyze --log chats.csv --format csv --report-format markdown
+
+  # Run adversarial testing with Ollama
+  patience adversarial --target http://localhost:3000/chat --adversary ollama
+  patience adversarial --config adversarial-config.json
 
 For more information, visit: https://github.com/patience-chatbot
   `);
@@ -81,6 +107,25 @@ For more information, visit: https://github.com/patience-chatbot
  * Main execution function
  */
 async function main(): Promise<void> {
+  // Check for command
+  const command = process.argv[2];
+
+  if (command === 'analyze') {
+    await analyzeCommand();
+    return;
+  }
+
+  if (command === 'adversarial') {
+    const args = process.argv.slice(3);
+    await runAdversarialCommand(args);
+    return;
+  }
+
+  // Handle 'test' command or default behavior
+  if (command === 'test') {
+    process.argv.splice(2, 1); // Remove 'test' from args
+  }
+
   const args = parseArgs();
 
   if (args.help) {

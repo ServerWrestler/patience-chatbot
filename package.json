@@ -1,7 +1,7 @@
 {
   "name": "patience-chatbot",
-  "version": "1.0.0",
-  "description": "A chat bot testing framework for automated validation of conversational AI systems",
+  "version": "0.1.0-beta.1",
+  "description": "Comprehensive chatbot testing framework with live testing, log analysis, and AI-powered adversarial testing",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -11,27 +11,63 @@
     "build": "tsc",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "chatbot",
     "testing",
     "automation",
-    "conversational-ai"
+    "conversational-ai",
+    "ai-testing",
+    "bot-testing",
+    "llm",
+    "adversarial-testing",
+    "log-analysis",
+    "ollama",
+    "openai",
+    "anthropic",
+    "claude",
+    "gpt"
   ],
-  "author": "",
+  "author": "Eric Chadbourne <eric@chadbourne.consulting>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ServerWrestler/patience.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ServerWrestler/patience/issues"
+  },
+  "homepage": "https://github.com/ServerWrestler/patience#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "DOCUMENTATION.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
     "typescript": "^5.3.0",
-    "vitest": "^1.0.0"
+    "vitest": "^4.0.13"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.1",
     "axios": "^1.6.0",
     "fast-check": "^3.15.0",
     "js-yaml": "^4.1.1",
+    "openai": "^6.9.1",
+    "uuid": "^13.0.0",
     "ws": "^8.16.0"
   }
 }

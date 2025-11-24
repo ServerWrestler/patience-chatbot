@@ -1,17 +1,15 @@
 # Patience - The Chat Bot Testing System
 
-A comprehensive testing framework for automated validation of conversational AI systems. Patience simulates realistic user interactions to validate chat bot behavior, responses, and edge case handling.
+Comprehensive testing framework for conversational AI with three powerful modes: live testing, log analysis, and AI-powered adversarial testing.
 
 ## Features
 
-- **Multi-Protocol Support**: Test bots via HTTP and WebSocket protocols
-- **Scenario-Based Testing**: Define complex conversation flows with conditional branching
-- **Message Generation**: Generate diverse test inputs including edge cases
-- **Response Validation**: Multiple validation types (exact match, pattern, semantic similarity)
-- **Context Handling**: Test multi-turn conversations and context retention
-- **Timing Control**: Simulate human-like typing delays or rapid-fire testing
-- **Comprehensive Reporting**: Generate reports in JSON, HTML, and Markdown formats
-- **Configuration Management**: YAML/JSON configuration with hot-reload support
+- **Live Testing** - Scenario-based testing with HTTP/WebSocket support
+- **Log Analysis** - Retrospective testing of historical conversations
+- **Adversarial Testing** - AI-powered bot-to-bot testing with Ollama, OpenAI, and Anthropic
+- **Multi-format Reports** - JSON, HTML, Markdown, and CSV outputs
+- **Pattern Detection** - Identify failures and anomalies automatically
+- **Context Analysis** - Evaluate multi-turn conversation quality
 
 ## Installation
 
@@ -22,185 +20,98 @@ npm run build
 
 ## Quick Start
 
-1. Create a configuration file (`config.json`):
+```bash
+# Install
+npm install && npm run build
 
-```json
-{
-  "targetBot": {
-    "name": "My Bot",
-    "protocol": "http",
-    "endpoint": "http://localhost:3000/chat"
-  },
-  "scenarios": [
-    {
-      "id": "greeting",
-      "name": "Greeting Test",
-      "steps": [
-        {
-          "message": "Hello!",
-          "expectedResponse": {
-            "validationType": "pattern",
-            "expected": "hi|hello|hey"
-          }
-        }
-      ],
-      "expectedOutcomes": []
-    }
-  ],
-  "validation": {
-    "defaultType": "semantic",
-    "semanticSimilarityThreshold": 0.7
-  },
-  "timing": {
-    "enableDelays": false,
-    "baseDelay": 100,
-    "delayPerCharacter": 10,
-    "rapidFire": true,
-    "responseTimeout": 30000
-  },
-  "reporting": {
-    "outputPath": "./reports",
-    "formats": ["json", "html", "markdown"],
-    "includeConversationHistory": true,
-    "verboseErrors": true
-  }
-}
+# Live testing
+patience config.json
+
+# Analyze logs
+patience analyze conversations.json
+
+# Adversarial testing (local, free)
+patience adversarial --target http://localhost:3000/chat --adversary ollama
 ```
 
-2. Run tests:
+See [examples/](examples/) for configuration files.
+
+## CLI Commands
 
 ```bash
-npm start -- config.json
-# or after building:
-node dist/cli.js config.json
+# Live testing
+patience config.json
+patience --help
+
+# Log analysis
+patience analyze conversations.json
+patience analyze --config analysis-config.json
+
+# Adversarial testing
+patience adversarial --target <url> --adversary ollama
+patience adversarial --config adversarial-config.json
 ```
 
-## CLI Usage
-
-```
-Usage:
-  patience [options] <config-file>
-
-Options:
-  -c, --config <file>    Path to configuration file (JSON or YAML)
-  -o, --output <path>    Output directory for reports (default: ./reports)
-  -f, --format <format>  Report format: json, html, markdown (default: json)
-  -h, --help             Show this help message
-```
+Run `patience <command> --help` for detailed options.
 
 ## Configuration
 
-### Target Bot
+See [examples/](examples/) for complete configuration files:
+- Live testing: See README examples
+- Log analysis: `examples/analysis-config.json`
+- Adversarial testing: `examples/adversarial-*.json`
 
-```json
-{
-  "targetBot": {
-    "name": "Bot Name",
-    "protocol": "http",
-    "endpoint": "http://localhost:3000/chat",
-    "authentication": {
-      "type": "bearer",
-      "credentials": "your-token"
-    },
-    "headers": {
-      "Custom-Header": "value"
-    }
-  }
-}
+**Validation types:** exact, pattern, semantic, custom  
+**Protocols:** HTTP, WebSocket  
+**Report formats:** JSON, HTML, Markdown, CSV
+
+## Log Analysis
+
+Analyze historical conversations in JSON, CSV, or text format.
+
+**Features:** Metrics calculation, pattern detection, context analysis, filtering
+
+**Example:**
+```bash
+patience analyze conversations.json
 ```
 
-### Scenarios
-
-Define conversation flows with steps and validation:
-
-```json
-{
-  "scenarios": [
-    {
-      "id": "scenario-1",
-      "name": "Test Scenario",
-      "description": "Description of the test",
-      "steps": [
-        {
-          "message": "User message",
-          "expectedResponse": {
-            "validationType": "exact",
-            "expected": "Expected bot response"
-          },
-          "delay": 1000
-        }
-      ],
-      "expectedOutcomes": []
-    }
-  ]
-}
-```
-
-### Validation Types
-
-- **exact**: Exact string match
-- **pattern**: Regular expression match
-- **semantic**: Semantic similarity (configurable threshold)
-- **custom**: Custom validation function
-
-### Timing Configuration
-
-```json
-{
-  "timing": {
-    "enableDelays": true,
-    "baseDelay": 100,
-    "delayPerCharacter": 10,
-    "rapidFire": false,
-    "responseTimeout": 30000
-  }
-}
-```
+See [examples/sample-logs/](examples/sample-logs/) for format specifications.
 
 ## Programmatic Usage
 
 ```typescript
-import { TestExecutor, ConfigurationManager, ReportGenerator } from 'patience-chatbot';
+import { TestExecutor, AnalysisEngine, AdversarialTestOrchestrator } from 'patience-chatbot';
 
-async function runTests() {
-  // Load configuration
-  const configManager = new ConfigurationManager();
-  const config = await configManager.loadConfig('config.json');
+// Live testing
+const executor = new TestExecutor();
+const results = await executor.executeTests(config);
 
-  // Execute tests
-  const executor = new TestExecutor();
-  const results = await executor.executeTests(config);
+// Log analysis
+const engine = new AnalysisEngine();
+const analysis = await engine.analyze(config);
 
-  // Generate report
-  const reportGenerator = new ReportGenerator();
-  const report = reportGenerator.generateReport(results);
-  const html = reportGenerator.formatReport(report, 'html');
-
-  console.log(html);
-}
+// Adversarial testing
+const orchestrator = new AdversarialTestOrchestrator(config);
+const adversarial = await orchestrator.run();
 ```
 
 ## Architecture
 
-Patience follows a modular architecture:
+Modular design with three main systems:
 
-- **Configuration Layer**: Loads and validates test scenarios
-- **Execution Layer**: Orchestrates test sessions and manages conversation flow
-- **Communication Layer**: Handles protocol-specific interactions (HTTP/WebSocket)
-- **Validation Layer**: Evaluates bot responses against expected criteria
-- **Reporting Layer**: Generates comprehensive test reports
+1. **Live Testing** - Configuration → Execution → Communication → Validation → Reporting
+2. **Log Analysis** - Loading → Parsing → Filtering → Analysis → Reporting
+3. **Adversarial** - LLM Connectors → Strategy → Conversation Manager → Validation → Logging
 
-## Project Structure
+## Documentation
 
-```
-src/
-├── types/           # Core TypeScript type definitions
-├── config/          # Configuration management
-├── execution/       # Test execution and orchestration
-├── communication/   # Protocol adapters (HTTP, WebSocket)
-├── validation/      # Response validation logic
-└── reporting/       # Report generation
-```
+- **[README.md](README.md)** - This file (overview and quick start)
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Complete documentation guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+- **[examples/ADVERSARIAL_TESTING.md](examples/ADVERSARIAL_TESTING.md)** - Detailed adversarial guide
+- **[examples/](examples/)** - Configuration examples and sample data
 
 ## Development
 
@@ -215,17 +126,28 @@ npm run build
 npm test
 ```
 
-## Technology Stack
+## Adversarial Testing
 
-- **TypeScript** for type safety
-- **fast-check** for property-based testing
-- **axios** for HTTP communication
-- **ws** for WebSocket communication
-- **js-yaml** for YAML configuration support
-- **vitest** for unit testing
+AI-powered bot-to-bot testing with multiple LLM providers.
+
+**Providers:** Ollama (local/free), OpenAI (GPT-4), Anthropic (Claude)  
+**Strategies:** Exploratory, adversarial, focused, stress
+
+**Example:**
+```bash
+patience adversarial --target http://localhost:3000/chat --adversary ollama
+```
+
+See [examples/ADVERSARIAL_TESTING.md](examples/ADVERSARIAL_TESTING.md) for detailed guide.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+```bash
+npm install && npm run build && npm test
+```
 
 ## License
 
-MIT License - Copyright (c) 2025 Patience Contributors
-
-See [LICENSE](LICENSE) file for details.
+MIT License - See [LICENSE](LICENSE) for details.

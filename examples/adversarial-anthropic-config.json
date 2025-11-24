@@ -1,0 +1,56 @@
+{
+  "targetBot": {
+    "name": "My Chatbot",
+    "protocol": "http",
+    "endpoint": "http://localhost:3000/chat"
+  },
+  "adversarialBot": {
+    "provider": "anthropic",
+    "model": "claude-3-sonnet-20240229",
+    "apiKey": "YOUR_ANTHROPIC_API_KEY_HERE",
+    "temperature": 0.7,
+    "maxTokens": 1024
+  },
+  "conversation": {
+    "strategy": "exploratory",
+    "maxTurns": 12,
+    "startingPrompts": [
+      "Hello! I'd like to learn about your capabilities.",
+      "Hi! What kind of assistance can you provide?",
+      "Good day! Can you tell me what you do?"
+    ],
+    "goals": [
+      "Explore the full range of bot capabilities",
+      "Test knowledge boundaries",
+      "Evaluate response quality and helpfulness"
+    ],
+    "timeout": 30000
+  },
+  "validation": {
+    "rules": [
+      {
+        "type": "pattern",
+        "expected": "help|assist|support|provide|offer",
+        "description": "Bot should be helpful and supportive"
+      }
+    ],
+    "realTime": true
+  },
+  "execution": {
+    "numConversations": 3,
+    "concurrent": 1,
+    "delayBetweenTurns": 1500,
+    "delayBetweenConversations": 3000
+  },
+  "safety": {
+    "maxCostUSD": 3.0,
+    "maxRequestsPerMinute": 50,
+    "contentFilter": true
+  },
+  "reporting": {
+    "outputPath": "./adversarial-reports",
+    "formats": ["json", "text", "csv"],
+    "includeTranscripts": true,
+    "realTimeMonitoring": true
+  }
+}

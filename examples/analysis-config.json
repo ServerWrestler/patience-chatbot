@@ -1,0 +1,28 @@
+{
+  "logSource": {
+    "path": "examples/sample-logs/conversations.json",
+    "format": "json"
+  },
+  "filters": {
+    "minMessages": 3
+  },
+  "validation": {
+    "rules": [
+      {
+        "type": "pattern",
+        "expected": "help|assist|support",
+        "description": "Bot should offer help or assistance"
+      }
+    ]
+  },
+  "analysis": {
+    "calculateMetrics": true,
+    "detectPatterns": true,
+    "checkContextRetention": true
+  },
+  "reporting": {
+    "outputPath": "./analysis-reports",
+    "formats": ["html", "json", "markdown"],
+    "includeDetailedResults": true
+  }
+}

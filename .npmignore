@@ -1,0 +1,40 @@
+# Source files
+src/
+tsconfig.json
+
+# Tests
+**/__tests__/
+*.test.ts
+*.spec.ts
+
+# Development files
+.kiro/
+.vscode/
+.github/
+node_modules/
+
+# Documentation (keep only essential)
+RELEASE_CHECKLIST.md
+DOCUMENTATION.md
+
+# Build artifacts
+*.tsbuildinfo
+
+# Logs and reports
+reports/
+adversarial-reports/
+analysis-reports/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Misc
+*.swp
+*.swo
+*~

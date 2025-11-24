@@ -1,0 +1,17 @@
+conversation_id,timestamp,sender,content,user_id
+conv-001,2025-01-15T10:30:00Z,user,"Hello, I need help with my account",user-123
+conv-001,2025-01-15T10:30:02Z,bot,"Hi there! I'd be happy to help you with your account. What specific issue are you experiencing?",user-123
+conv-001,2025-01-15T10:30:15Z,user,I can't log in,user-123
+conv-001,2025-01-15T10:30:17Z,bot,"I understand you're having trouble logging in. Let me help you with that. Have you tried resetting your password?",user-123
+conv-001,2025-01-15T10:30:45Z,user,"Yes, but I didn't receive the reset email",user-123
+conv-001,2025-01-15T10:30:48Z,bot,"I see. Let me check your email settings. Can you confirm the email address associated with your account?",user-123
+conv-002,2025-01-15T11:00:00Z,user,What are your business hours?,user-456
+conv-002,2025-01-15T11:00:02Z,bot,"Our business hours are Monday through Friday, 9 AM to 5 PM EST. How else can I assist you?",user-456
+conv-002,2025-01-15T11:01:30Z,user,Do you offer weekend support?,user-456
+conv-002,2025-01-15T11:01:33Z,bot,"We offer limited weekend support through our online help center and chatbot. For urgent issues, you can reach our emergency line.",user-456
+conv-003,2025-01-15T14:20:00Z,user,I want to cancel my subscription,user-789
+conv-003,2025-01-15T14:20:03Z,bot,"I'm sorry to hear you want to cancel. May I ask what prompted this decision? We'd love to address any concerns you have.",user-789
+conv-003,2025-01-15T14:21:00Z,user,It's too expensive,user-789
+conv-003,2025-01-15T14:21:05Z,bot,"I understand budget concerns. We actually have some more affordable plans that might work better for you. Would you like to hear about them?",user-789
+conv-003,2025-01-15T14:22:00Z,user,"Sure, tell me more",user-789
+conv-003,2025-01-15T14:22:03Z,bot,"Great! We have a basic plan at $9.99/month and a standard plan at $19.99/month. Both include core features. Which would you like to learn more about?",user-789
