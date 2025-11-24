@@ -63,5 +63,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SECURITY.md with security policy
 - Example configuration files
 
-[Unreleased]: https://github.com/yourusername/patience/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/yourusername/patience/releases/tag/v1.0.0
+[Unreleased]: https://github.com/ServerWrestler/patience-chatbot/compare/v0.1.0-beta.1...HEAD
+[0.1.0-beta.1]: https://github.com/ServerWrestler/patience-chatbot/releases/tag/v0.1.0-beta.1

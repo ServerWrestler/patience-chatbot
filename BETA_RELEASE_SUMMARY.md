@@ -37,41 +37,43 @@ A **production-ready beta** of Patience with three major features:
 
 ## 📋 Next Steps (In Order)
 
-### 1. Update Repository URL (5 minutes)
-Edit `package.json` and replace `YOUR_USERNAME` with your GitHub username:
-```json
-"repository": {
-  "url": "https://github.com/YOUR_USERNAME/patience.git"
-}
+### 1. Verify Repository Setup (2 minutes)
+Your repository is already set up at:
+https://github.com/ServerWrestler/patience-chatbot
+
+Verify the remote:
+```bash
+git remote -v
+# Should show: origin  https://github.com/ServerWrestler/patience-chatbot.git
 ```
 
-### 2. Create GitHub Repository (5 minutes)
-- Go to https://github.com/new
-- Name: `patience`
-- Description: "Comprehensive chatbot testing framework"
-- Public
-- Don't initialize with README
-- Create
-
-### 3. Push to GitHub (2 minutes)
+### 2. Push to GitHub (2 minutes)
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/patience.git
-git push -u origin main
+# Ensure you're on main branch
+git checkout main
+
+# Commit any pending changes
+git add .
+git commit -m "chore: prepare for v0.1.0-beta.1 release"
+
+# Push code and tags
+git push origin main
 git push origin --tags
 ```
 
-### 4. Create GitHub Release (10 minutes)
-- Go to Releases → Draft new release
+### 3. Create GitHub Release (10 minutes)
+- Go to https://github.com/ServerWrestler/patience-chatbot/releases
+- Click "Draft a new release"
 - Tag: `v0.1.0-beta.1`
 - Title: "Patience v0.1.0-beta.1 - Beta Release"
 - Use template from RELEASE_GUIDE.md
 - Mark as pre-release
 - Publish
 
-### 5. Test Installation (5 minutes)
+### 4. Test Installation (5 minutes)
 ```bash
 # Clone in a new directory
-git clone https://github.com/YOUR_USERNAME/patience.git test-patience
+git clone https://github.com/ServerWrestler/patience-chatbot.git test-patience
 cd test-patience
 npm install
 npm run build

@@ -34,12 +34,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ServerWrestler/patience.git"
+    "url": "https://github.com/ServerWrestler/patience-chatbot.git"
   },
   "bugs": {
-    "url": "https://github.com/ServerWrestler/patience/issues"
+    "url": "https://github.com/ServerWrestler/patience-chatbot/issues"
   },
-  "homepage": "https://github.com/ServerWrestler/patience#readme",
+  "homepage": "https://github.com/ServerWrestler/patience-chatbot#readme",
   "engines": {
     "node": ">=16.0.0"
   },

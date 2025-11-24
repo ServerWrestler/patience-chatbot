@@ -64,56 +64,29 @@ git push origin main
 git push origin v0.1.0-beta.1
 ```
 
-### 5. Create GitHub Repository (if not exists)
+### 5. Push to GitHub
 
-1. Go to https://github.com/new
-2. Repository name: `patience`
-3. Description: "Comprehensive chatbot testing framework with live testing, log analysis, and AI-powered adversarial testing"
-4. Public repository
-5. Don't initialize with README (you already have one)
-6. Create repository
-
-### 6. Push to GitHub
+Your repository already exists at: https://github.com/ServerWrestler/patience-chatbot
 
 ```bash
-# Add remote (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/patience.git
+# Verify remote is set correctly
+git remote -v
 
-# Or if remote exists, update URL
-git remote set-url origin https://github.com/YOUR_USERNAME/patience.git
+# If not set, add it
+git remote add origin https://github.com/ServerWrestler/patience-chatbot.git
+
+# Or update if needed
+git remote set-url origin https://github.com/ServerWrestler/patience-chatbot.git
 
 # Push
 git push -u origin main
 git push origin --tags
 ```
 
-### 7. Update package.json with GitHub URL
+### 6. Create GitHub Release
 
-Update these lines in package.json (replace YOUR_USERNAME):
-
-```json
-"repository": {
-  "type": "git",
-  "url": "https://github.com/YOUR_USERNAME/patience.git"
-},
-"bugs": {
-  "url": "https://github.com/YOUR_USERNAME/patience/issues"
-},
-"homepage": "https://github.com/YOUR_USERNAME/patience#readme"
-```
-
-Then commit and push:
-
-```bash
-git add package.json
-git commit -m "chore: update repository URLs"
-git push origin main
-```
-
-### 8. Create GitHub Release
-
-1. Go to your repository on GitHub
-2. Click "Releases" → "Draft a new release"
+1. Go to https://github.com/ServerWrestler/patience-chatbot/releases
+2. Click "Draft a new release"
 3. Choose tag: `v0.1.0-beta.1`
 4. Release title: `Patience v0.1.0-beta.1 - Beta Release`
 5. Description: Use the template below
@@ -150,8 +123,8 @@ Patience is a comprehensive chatbot testing framework with three powerful modes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/patience.git
-cd patience
+git clone https://github.com/ServerWrestler/patience-chatbot.git
+cd patience-chatbot
 
 # Install dependencies
 npm install
@@ -242,7 +215,7 @@ A comprehensive chatbot testing framework with:
 - AI-powered adversarial testing (Ollama, OpenAI, Anthropic)
 
 Try it out and let me know what you think!
-https://github.com/YOUR_USERNAME/patience
+https://github.com/ServerWrestler/patience-chatbot
 
 #chatbots #testing #AI #opensource
 ```
