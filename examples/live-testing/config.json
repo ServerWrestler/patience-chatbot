@@ -1,0 +1,70 @@
+{
+  "targetBot": {
+    "name": "Example Bot",
+    "protocol": "http",
+    "endpoint": "http://localhost:3000/chat",
+    "authentication": {
+      "type": "bearer",
+      "credentials": "your-token-here"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "greeting",
+      "name": "Greeting Test",
+      "description": "Test basic greeting responses",
+      "steps": [
+        {
+          "message": "Hello!",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "hi|hello|hey|greetings"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    },
+    {
+      "id": "help-request",
+      "name": "Help Request",
+      "description": "Test help functionality",
+      "steps": [
+        {
+          "message": "I need help",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "help|assist|support"
+          }
+        },
+        {
+          "message": "Thank you",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "welcome|glad|happy"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    }
+  ],
+  "validation": {
+    "defaultType": "pattern",
+    "semanticSimilarityThreshold": 0.7
+  },
+  "timing": {
+    "enableDelays": false,
+    "baseDelay": 100,
+    "delayPerCharacter": 10,
+    "rapidFire": true,
+    "responseTimeout": 30000
+  },
+  "reporting": {
+    "outputPath": "./reports",
+    "formats": ["json", "html", "markdown"],
+    "includeConversationHistory": true,
+    "verboseErrors": true
+  }
+}

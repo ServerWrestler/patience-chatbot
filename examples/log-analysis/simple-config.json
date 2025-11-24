@@ -1,0 +1,16 @@
+{
+  "logSource": {
+    "path": "sample-logs/conversations.json",
+    "format": "auto"
+  },
+  "analysis": {
+    "calculateMetrics": true,
+    "detectPatterns": false,
+    "checkContextRetention": false
+  },
+  "reporting": {
+    "outputPath": "./analysis-reports",
+    "formats": ["html"],
+    "includeDetailedResults": false
+  }
+}

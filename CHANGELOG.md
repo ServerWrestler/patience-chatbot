@@ -5,6 +5,33 @@ All notable changes to Patience will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.1] - 2025-11-24
+
+### Added
+- **OpenAI Connector** - Full GPT-4, GPT-4-turbo, and GPT-3.5 support for adversarial testing
+- **Anthropic Connector** - Claude 3 models (Opus, Sonnet, Haiku) support for adversarial testing
+- **Organized Examples Directory** - Restructured examples into three clear directories:
+  - `examples/live-testing/` - Live testing configurations and guide
+  - `examples/log-analysis/` - Log analysis configurations and sample data
+  - `examples/adversarial-testing/` - Adversarial testing configurations for all providers
+- **Progressive Configuration Examples** - Each mode now has simple, standard, and advanced configs
+- **Comprehensive Documentation** - Each example directory has detailed README with:
+  - Complete configuration options
+  - CLI usage examples
+  - Use cases and tips
+  - Troubleshooting guides
+
+### Changed
+- **Expanded README** - Added detailed CLI options and configuration examples for all three modes
+- **Improved Examples Structure** - Better organization for easier navigation and learning
+- **Enhanced Live Testing Documentation** - Added comprehensive guide with all options explained
+
+### Documentation
+- Created detailed README for each testing mode
+- Added configuration examples at three complexity levels
+- Improved main README with expanded usage information
+- Added examples/README.md as navigation hub
+
 ## [0.1.0-beta.1] - 2025-11-23
 
 ### Added
@@ -63,5 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SECURITY.md with security policy
 - Example configuration files
 
-[Unreleased]: https://github.com/ServerWrestler/patience-chatbot/compare/v0.1.0-beta.1...HEAD
+[Unreleased]: https://github.com/ServerWrestler/patience-chatbot/compare/v0.2.0-beta.1...HEAD
+[0.2.0-beta.1]: https://github.com/ServerWrestler/patience-chatbot/releases/tag/v0.2.0-beta.1
 [0.1.0-beta.1]: https://github.com/ServerWrestler/patience-chatbot/releases/tag/v0.1.0-beta.1

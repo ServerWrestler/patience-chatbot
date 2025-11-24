@@ -1,0 +1,34 @@
+{
+  "logSource": {
+    "path": "sample-logs/conversations.json",
+    "format": "json"
+  },
+  "filters": {
+    "dateRange": {
+      "start": "2025-01-01T00:00:00Z",
+      "end": "2025-12-31T23:59:59Z"
+    },
+    "minMessages": 5,
+    "maxMessages": 100,
+    "textContains": "help"
+  },
+  "validation": {
+    "rules": [
+      {
+        "type": "pattern",
+        "expected": "help|assist|support|can|able",
+        "description": "Bot should offer helpful responses"
+      }
+    ]
+  },
+  "analysis": {
+    "calculateMetrics": true,
+    "detectPatterns": true,
+    "checkContextRetention": true
+  },
+  "reporting": {
+    "outputPath": "./analysis-reports/filtered",
+    "formats": ["html", "json", "csv"],
+    "includeDetailedResults": true
+  }
+}

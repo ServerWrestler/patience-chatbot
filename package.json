@@ -1,6 +1,6 @@
 {
   "name": "patience-chatbot",
-  "version": "0.1.0-beta.1",
+  "version": "0.2.0-beta.1",
   "description": "Comprehensive chatbot testing framework with live testing, log analysis, and AI-powered adversarial testing",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

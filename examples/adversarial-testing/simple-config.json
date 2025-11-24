@@ -1,0 +1,24 @@
+{
+  "targetBot": {
+    "name": "My Bot",
+    "protocol": "http",
+    "endpoint": "http://localhost:3000/chat"
+  },
+  "adversarialBot": {
+    "provider": "ollama",
+    "model": "llama2"
+  },
+  "conversation": {
+    "strategy": "exploratory",
+    "maxTurns": 10
+  },
+  "execution": {
+    "numConversations": 3
+  },
+  "reporting": {
+    "outputPath": "./adversarial-reports",
+    "formats": ["json"],
+    "includeTranscripts": true,
+    "realTimeMonitoring": true
+  }
+}

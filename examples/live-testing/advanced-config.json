@@ -1,0 +1,82 @@
+{
+  "targetBot": {
+    "name": "Advanced Bot",
+    "protocol": "websocket",
+    "endpoint": "ws://localhost:3000/ws",
+    "authentication": {
+      "type": "bearer",
+      "credentials": "your-secure-token"
+    },
+    "headers": {
+      "X-API-Version": "v2",
+      "X-Client-ID": "patience-test"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "complex-flow",
+      "name": "Complex Conversation Flow",
+      "description": "Multi-turn conversation with context",
+      "steps": [
+        {
+          "message": "Hello, I'm looking for information about your services",
+          "expectedResponse": {
+            "validationType": "semantic",
+            "expected": "I can help you learn about our services",
+            "threshold": 0.7
+          },
+          "delay": 1000
+        },
+        {
+          "message": "What are your pricing options?",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "pricing|price|cost|plan"
+          },
+          "delay": 1500
+        },
+        {
+          "message": "Do you offer enterprise plans?",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "enterprise|business|custom"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    },
+    {
+      "id": "error-handling",
+      "name": "Error Handling Test",
+      "description": "Test bot's error responses",
+      "steps": [
+        {
+          "message": "asdfghjkl",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "understand|clarify|help|sorry"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    }
+  ],
+  "validation": {
+    "defaultType": "semantic",
+    "semanticSimilarityThreshold": 0.75,
+    "customValidators": {}
+  },
+  "timing": {
+    "enableDelays": true,
+    "baseDelay": 500,
+    "delayPerCharacter": 20,
+    "rapidFire": false,
+    "responseTimeout": 45000
+  },
+  "reporting": {
+    "outputPath": "./reports/advanced",
+    "formats": ["json", "html", "markdown"],
+    "includeConversationHistory": true,
+    "verboseErrors": true
+  }
+}

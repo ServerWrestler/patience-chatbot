@@ -1,0 +1,35 @@
+{
+  "targetBot": {
+    "name": "My Bot",
+    "protocol": "http",
+    "endpoint": "http://localhost:3000/chat"
+  },
+  "scenarios": [
+    {
+      "id": "basic-test",
+      "name": "Basic Test",
+      "steps": [
+        {
+          "message": "Hello",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "hi|hello"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    }
+  ],
+  "validation": {
+    "defaultType": "pattern"
+  },
+  "timing": {
+    "enableDelays": false,
+    "rapidFire": true,
+    "responseTimeout": 30000
+  },
+  "reporting": {
+    "outputPath": "./reports",
+    "formats": ["html"]
+  }
+}
