@@ -70,7 +70,7 @@ export class ResponseValidator {
   private validatePattern(actual: string, criteria: ValidationCriteria): ValidationResult {
     const pattern = criteria.expected instanceof RegExp 
       ? criteria.expected 
-      : new RegExp(String(criteria.expected));
+      : new RegExp(String(criteria.expected), 'i'); // Case-insensitive by default
     
     const passed = this.validatePatternMatch(actual, pattern);
 

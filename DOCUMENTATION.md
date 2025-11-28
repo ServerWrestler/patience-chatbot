@@ -78,7 +78,7 @@ Contains:
 
 ## 📖 Feature-Specific Documentation
 
-### [examples/ADVERSARIAL_TESTING.md](examples/ADVERSARIAL_TESTING.md)
+### [examples/adversarial-testing/README.md](examples/adversarial-testing/README.md)
 **Complete guide to adversarial testing**
 
 Contains:
@@ -96,7 +96,7 @@ Contains:
 
 ---
 
-### [examples/sample-logs/README.md](examples/sample-logs/README.md)
+### [examples/log-analysis/sample-logs/README.md](examples/log-analysis/sample-logs/README.md)
 **Log format documentation**
 
 Contains:
@@ -109,7 +109,7 @@ Contains:
 
 ---
 
-### [examples/sample-logs/USAGE.md](examples/sample-logs/USAGE.md)
+### [examples/log-analysis/sample-logs/USAGE.md](examples/log-analysis/sample-logs/USAGE.md)
 **Quick start for log analysis**
 
 Contains:
@@ -127,18 +127,18 @@ Contains:
 - No dedicated config example yet (use README examples)
 
 ### Chat Log Analysis
-- **[examples/analysis-config.json](examples/analysis-config.json)** - Complete analysis configuration with all options
+- **[examples/log-analysis/config.json](examples/log-analysis/config.json)** - Complete analysis configuration with all options
 
 ### Adversarial Testing
-- **[examples/adversarial-config.json](examples/adversarial-config.json)** - Ollama configuration (local, free)
-- **[examples/adversarial-openai-config.json](examples/adversarial-openai-config.json)** - OpenAI/GPT-4 configuration
-- **[examples/adversarial-anthropic-config.json](examples/adversarial-anthropic-config.json)** - Anthropic/Claude configuration
+- **[examples/adversarial-testing/adversarial-config.json](examples/adversarial-testing/adversarial-config.json)** - Ollama configuration (local, free)
+- **[examples/adversarial-testing/adversarial-openai-config.json](examples/adversarial-testing/adversarial-openai-config.json)** - OpenAI/GPT-4 configuration
+- **[examples/adversarial-testing/adversarial-anthropic-config.json](examples/adversarial-testing/adversarial-anthropic-config.json)** - Anthropic/Claude configuration
 
 ---
 
 ## 📊 Sample Data
 
-### [examples/sample-logs/](examples/sample-logs/)
+### [examples/log-analysis/sample-logs/](examples/log-analysis/sample-logs/)
 Contains sample conversation logs in multiple formats:
 - **conversations.json** - JSON format example
 - **conversations.csv** - CSV format example
@@ -150,13 +150,13 @@ Use these to test the analysis features!
 
 ## 🗂️ Internal Documentation
 
-### [.kiro/steering/](..kiro/steering/)
+### [.kiro/steering/](.kiro/steering/)
 Internal project guidance (for development):
 - **product.md** - Product overview and purpose
 - **structure.md** - Project structure conventions
 - **tech.md** - Technology stack and tools
 
-### [.kiro/specs/](..kiro/specs/)
+### [.kiro/specs/](.kiro/specs/)
 Feature specifications (for development):
 - **chat-log-analysis/** - Analysis feature specs
   - requirements.md
@@ -185,11 +185,11 @@ Feature specifications (for development):
 
 ### "I want to run adversarial bot-to-bot testing"
 1. Read [README.md](README.md) - "Adversarial Testing" section
-2. Read [examples/ADVERSARIAL_TESTING.md](examples/ADVERSARIAL_TESTING.md) for details
+2. Read [examples/adversarial-testing/README.md](examples/adversarial-testing/README.md) for details
 3. Choose your LLM provider and review the appropriate config:
-   - Ollama: [adversarial-config.json](examples/adversarial-config.json)
-   - OpenAI: [adversarial-openai-config.json](examples/adversarial-openai-config.json)
-   - Anthropic: [adversarial-anthropic-config.json](examples/adversarial-anthropic-config.json)
+   - Ollama: [examples/adversarial-testing/adversarial-config.json](examples/adversarial-testing/adversarial-config.json)
+   - OpenAI: [examples/adversarial-testing/adversarial-openai-config.json](examples/adversarial-testing/adversarial-openai-config.json)
+   - Anthropic: [examples/adversarial-testing/adversarial-anthropic-config.json](examples/adversarial-testing/adversarial-anthropic-config.json)
 4. Run: `patience adversarial --config your-config.json`
 
 ### "I want to contribute to Patience"

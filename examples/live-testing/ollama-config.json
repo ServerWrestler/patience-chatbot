@@ -1,0 +1,58 @@
+{
+  "targetBot": {
+    "name": "Ollama Llama2",
+    "protocol": "http",
+    "endpoint": "http://localhost:11434/api/chat",
+    "provider": "ollama",
+    "model": "llama2"
+  },
+  "scenarios": [
+    {
+      "id": "greeting",
+      "name": "Greeting Test",
+      "description": "Test basic greeting responses",
+      "steps": [
+        {
+          "message": "Hello! How are you?",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "hello|hi|greetings|good|fine|well"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    },
+    {
+      "id": "question",
+      "name": "Question Test",
+      "description": "Test question answering",
+      "steps": [
+        {
+          "message": "What is the capital of France?",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "Paris"
+          }
+        }
+      ],
+      "expectedOutcomes": []
+    }
+  ],
+  "validation": {
+    "defaultType": "pattern",
+    "semanticSimilarityThreshold": 0.7
+  },
+  "timing": {
+    "enableDelays": false,
+    "baseDelay": 100,
+    "delayPerCharacter": 10,
+    "rapidFire": true,
+    "responseTimeout": 60000
+  },
+  "reporting": {
+    "outputPath": "./reports",
+    "formats": ["json", "html", "markdown"],
+    "includeConversationHistory": true,
+    "verboseErrors": true
+  }
+}

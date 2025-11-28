@@ -61,9 +61,10 @@ export class HTTPAdapter extends BaseProtocolAdapter {
     const startTime = Date.now();
 
     try {
-      const response = await this.client!.post('', {
-        message
-      });
+      // Format request based on provider
+      const requestBody = this.formatRequest(message);
+      
+      const response = await this.client!.post('', requestBody);
 
       const responseTime = Date.now() - startTime;
 
@@ -73,14 +74,18 @@ export class HTTPAdapter extends BaseProtocolAdapter {
         return this.createErrorResponse(error);
       }
 
+      // Extract content based on provider
+      const content = this.extractContent(response.data);
+
       return {
-        content: response.data,
+        content,
         timestamp: new Date(),
         responseTime,
         metadata: {
           statusCode: response.status,
           headers: response.headers,
-          protocol: 'http'
+          protocol: 'http',
+          provider: this.config?.provider
         }
       };
     } catch (error) {
@@ -104,6 +109,60 @@ export class HTTPAdapter extends BaseProtocolAdapter {
         responseTime
       };
     }
+  }
+
+  /**
+   * Format request body based on provider
+   */
+  private formatRequest(message: string): any {
+    if (this.config?.provider === 'ollama') {
+      return {
+        model: this.config.model || 'llama2',
+        messages: [
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        stream: false
+      };
+    }
+
+    // Generic format
+    return { message };
+  }
+
+  /**
+   * Extract content from response based on provider
+   */
+  private extractContent(data: any): string {
+    if (this.config?.provider === 'ollama') {
+      // Ollama /api/chat format
+      if (data.message?.content) {
+        return data.message.content;
+      }
+      // Ollama /api/generate format
+      if (data.response) {
+        return data.response;
+      }
+    }
+
+    // Generic format - try common patterns
+    if (typeof data === 'string') {
+      return data;
+    }
+    if (data.content) {
+      return data.content;
+    }
+    if (data.message) {
+      return data.message;
+    }
+    if (data.response) {
+      return data.response;
+    }
+
+    // Return as JSON string if no known format
+    return JSON.stringify(data);
   }
 
   /**

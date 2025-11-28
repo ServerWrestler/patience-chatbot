@@ -281,7 +281,7 @@ Modular design with three main systems:
 - **[DOCUMENTATION.md](DOCUMENTATION.md)** - Complete documentation guide
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
-- **[examples/ADVERSARIAL_TESTING.md](examples/ADVERSARIAL_TESTING.md)** - Detailed adversarial guide
+- **[examples/adversarial-testing/README.md](examples/adversarial-testing/README.md)** - Detailed adversarial guide
 - **[examples/](examples/)** - Configuration examples and sample data
 
 ## Development

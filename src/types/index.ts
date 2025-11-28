@@ -20,6 +20,8 @@ export interface BotConfig {
   endpoint: string;
   authentication?: AuthConfig;
   headers?: Record<string, string>;
+  provider?: 'ollama' | 'generic';
+  model?: string;
 }
 
 export interface AuthConfig {

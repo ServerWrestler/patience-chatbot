@@ -51,9 +51,16 @@ export class ResponseStorage {
    * Store a bot response in the conversation history
    */
   storeResponse(sessionId: string, response: BotResponse): void {
-    const content = typeof response.content === 'string' 
-      ? response.content 
-      : JSON.stringify(response.content);
+    let content: string;
+    
+    // If there's an error, use the error message as content
+    if (response.error) {
+      content = `Error: ${response.error.message}`;
+    } else {
+      content = typeof response.content === 'string' 
+        ? response.content 
+        : JSON.stringify(response.content);
+    }
 
     this.storeMessage(sessionId, 'target', content);
   }

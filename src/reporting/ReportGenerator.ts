@@ -93,6 +93,7 @@ export class ReportGenerator {
       '<!DOCTYPE html>',
       '<html>',
       '<head>',
+      '  <meta charset="UTF-8">',
       '  <title>Patience Test Report</title>',
       '  <style>',
       '    body { font-family: Arial, sans-serif; margin: 20px; }',
@@ -101,7 +102,10 @@ export class ReportGenerator {
       '    .passed { color: green; }',
       '    .failed { color: red; }',
       '    .scenario { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }',
-      '    .message { margin: 5px 0; padding: 5px; background: #fafafa; }',
+      '    .message { margin: 5px 0; padding: 10px; background: #fafafa; white-space: pre-wrap; word-wrap: break-word; }',
+      '    .validation { margin: 5px 0 5px 20px; padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; white-space: pre-wrap; word-wrap: break-word; }',
+      '    .validation.passed { background: #d4edda; border-left-color: #28a745; }',
+      '    .validation.failed { background: #f8d7da; border-left-color: #dc3545; }',
       '  </style>',
       '</head>',
       '<body>',
@@ -123,13 +127,35 @@ export class ReportGenerator {
       lines.push(`    <p><strong>Duration:</strong> ${scenario.duration}ms</p>`);
 
       if (scenario.error) {
-        lines.push(`    <p class="failed"><strong>Error:</strong> ${scenario.error.message}</p>`);
+        lines.push(`    <p class="failed"><strong>Error:</strong> ${this.escapeHtml(scenario.error.message)}</p>`);
       }
 
       if (scenario.conversationHistory.messages.length > 0) {
         lines.push('    <h4>Conversation:</h4>');
         for (const msg of scenario.conversationHistory.messages) {
-          lines.push(`    <div class="message"><strong>${msg.sender}:</strong> ${msg.content}</div>`);
+          const content = msg.content || '(empty response)';
+          lines.push(`    <div class="message"><strong>${msg.sender}:</strong> ${this.escapeHtml(content)}</div>`);
+          
+          // Show validation results if present
+          if (msg.validationResult) {
+            const valClass = msg.validationResult.passed ? 'passed' : 'failed';
+            lines.push(`    <div class="validation ${valClass}">`);
+            lines.push(`      <strong>Validation:</strong> ${msg.validationResult.passed ? '✓ PASSED' : '✗ FAILED'}<br>`);
+            
+            if (msg.validationResult.expected) {
+              lines.push(`      <strong>Expected:</strong> ${this.escapeHtml(msg.validationResult.expected)}<br>`);
+            }
+            
+            if (msg.validationResult.actual) {
+              lines.push(`      <strong>Actual:</strong> ${this.escapeHtml(msg.validationResult.actual)}<br>`);
+            }
+            
+            if (msg.validationResult.message) {
+              lines.push(`      <strong>Message:</strong> ${this.escapeHtml(msg.validationResult.message)}`);
+            }
+            
+            lines.push('    </div>');
+          }
         }
       }
 
@@ -140,6 +166,27 @@ export class ReportGenerator {
     lines.push('</html>');
 
     return lines.join('\n');
+  }
+
+  /**
+   * Escape HTML special characters and format for display
+   */
+  private escapeHtml(text: string): string {
+    // Only escape the truly dangerous characters for XSS
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;'
+    };
+    
+    // Escape HTML special characters (but not apostrophes - they're safe in content)
+    let escaped = text.replace(/[&<>"]/g, m => map[m]);
+    
+    // Convert newlines to <br> tags
+    escaped = escaped.replace(/\n/g, '<br>');
+    
+    return escaped;
   }
 
   /**

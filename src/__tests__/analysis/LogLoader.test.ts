@@ -8,7 +8,7 @@ import * as path from 'path';
 
 describe('LogLoader', () => {
   const loader = new LogLoader();
-  const samplesDir = path.join(process.cwd(), 'examples', 'sample-logs');
+  const samplesDir = path.join(process.cwd(), 'examples', 'log-analysis', 'sample-logs');
 
   test('should load JSON log file', async () => {
     const logPath = path.join(samplesDir, 'conversations.json');

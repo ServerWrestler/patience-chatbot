@@ -5,6 +5,54 @@ All notable changes to Patience will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.2] - 2025-11-28
+
+### Added
+- **Ollama Support for Live Testing** - Test Ollama models directly as target bots
+  - Added `provider` and `model` fields to `BotConfig`
+  - HTTPAdapter now formats requests for Ollama API
+  - Automatic response extraction from Ollama format
+  - Example configuration in `examples/live-testing/ollama-config.json`
+- **Enhanced HTML Reports** - Improved report formatting and error display
+  - Added UTF-8 charset declaration for proper character encoding
+  - Validation results now displayed in color-coded boxes
+  - Error messages shown in conversation history
+  - Line breaks properly rendered with `<br>` tags
+  - Better CSS styling with pre-wrap for multi-line content
+
+### Fixed
+- **Pattern Validation** - Regex patterns now case-insensitive by default
+  - Fixes issue where "Hello" wouldn't match pattern "hello|hi|hey"
+- **Error Display in Reports** - Error messages now properly shown in HTML reports
+  - Previously errors were stored but not displayed
+  - Now shows full error details in conversation history
+- **Character Encoding** - Fixed "Iâ€™m" and similar encoding issues
+  - Added UTF-8 meta tag to HTML reports
+  - Removed unnecessary apostrophe escaping
+- **Response Storage** - Error responses now properly captured
+  - Error messages from BotResponse.error field now stored in content
+  - Empty responses now show actual error details
+- **Documentation Links** - Fixed all broken links in DOCUMENTATION.md
+  - Corrected paths to example files
+  - Fixed typos in .kiro directory references
+  - Updated adversarial testing guide references
+
+### Changed
+- **Timing Configuration** - All timing fields now required in config
+  - `baseDelay` and `delayPerCharacter` must be specified
+  - Updated minimal config examples in DEBUGGING.md
+- **HTML Report Styling** - Improved readability and formatting
+  - Increased padding on message boxes
+  - Added white-space: pre-wrap for proper line breaks
+  - Better visual distinction between passed/failed validations
+
+### Documentation
+- Updated DEBUGGING.md with Ollama configuration examples
+- Added ollama-config.json to live-testing examples
+- Updated live-testing README with Ollama provider documentation
+- Fixed all broken documentation links
+- Created DOCUMENTATION_REVIEW.md for tracking documentation issues
+
 ## [0.2.0-beta.1] - 2025-11-24
 
 ### Added
@@ -90,6 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SECURITY.md with security policy
 - Example configuration files
 
-[Unreleased]: https://github.com/ServerWrestler/patience-chatbot/compare/v0.2.0-beta.1...HEAD
+[Unreleased]: https://github.com/ServerWrestler/patience-chatbot/compare/v0.2.0-beta.2...HEAD
+[0.2.0-beta.2]: https://github.com/ServerWrestler/patience-chatbot/compare/v0.2.0-beta.1...v0.2.0-beta.2
 [0.2.0-beta.1]: https://github.com/ServerWrestler/patience-chatbot/releases/tag/v0.2.0-beta.1
 [0.1.0-beta.1]: https://github.com/ServerWrestler/patience-chatbot/releases/tag/v0.1.0-beta.1

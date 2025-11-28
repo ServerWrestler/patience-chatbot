@@ -9,7 +9,7 @@ import * as path from 'path';
 
 describe('Log Parsers', () => {
   const loader = new LogLoader();
-  const samplesDir = path.join(process.cwd(), 'examples', 'sample-logs');
+  const samplesDir = path.join(process.cwd(), 'examples', 'log-analysis', 'sample-logs');
 
   describe('JsonLogParser', () => {
     const parser = new JsonLogParser();

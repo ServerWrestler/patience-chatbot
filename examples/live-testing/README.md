@@ -17,6 +17,7 @@ node dist/cli.js examples/live-testing/config.json
 - **[config.json](config.json)** - Complete example with all options
 - **[simple-config.json](simple-config.json)** - Minimal configuration to get started
 - **[advanced-config.json](advanced-config.json)** - Advanced features and options
+- **[ollama-config.json](ollama-config.json)** - Configuration for testing Ollama models
 
 ## Configuration Options
 
@@ -41,9 +42,27 @@ Define your bot's connection details:
 }
 ```
 
+**For Ollama models:**
+
+```json
+{
+  "targetBot": {
+    "name": "Ollama Llama2",
+    "protocol": "http",
+    "endpoint": "http://localhost:11434/api/chat",
+    "provider": "ollama",
+    "model": "llama2"
+  }
+}
+```
+
 **Protocols:**
 - `http` - REST API endpoint
 - `websocket` - WebSocket connection
+
+**Providers:**
+- `generic` (default) - Standard chat bot API
+- `ollama` - Ollama model API
 
 **Authentication types:**
 - `bearer` - Bearer token
