@@ -124,7 +124,10 @@ Contains:
 ## 🔧 Configuration Examples
 
 ### Live Testing
-- No dedicated config example yet (use README examples)
+- **[examples/live-testing/simple-config.json](examples/live-testing/simple-config.json)** - Minimal configuration
+- **[examples/live-testing/config.json](examples/live-testing/config.json)** - Complete configuration with all options
+- **[examples/live-testing/advanced-config.json](examples/live-testing/advanced-config.json)** - Advanced features
+- **[examples/live-testing/ollama-config.json](examples/live-testing/ollama-config.json)** - Ollama model testing
 
 ### Chat Log Analysis
 - **[examples/log-analysis/config.json](examples/log-analysis/config.json)** - Complete analysis configuration with all options
