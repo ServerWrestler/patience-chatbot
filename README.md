@@ -1,6 +1,8 @@
 # Patience - The Chat Bot Testing System
 
-Comprehensive testing framework for conversational AI with three powerful modes: live testing, log analysis, and AI-powered adversarial testing.
+Comprehensive testing framework for conversational AI with three powerful modes: live scenarios, log analysis, and AI-powered adversarial testing.
+
+⚠️ **Note:** This project is under active development with frequent updates. We're pushing towards a stable release for Christmas! 🎁
 
 ## Features
 

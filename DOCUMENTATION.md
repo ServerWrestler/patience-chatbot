@@ -173,6 +173,52 @@ Feature specifications (for development):
 
 ---
 
+## 🖥️ GUI Application
+
+Patience includes a desktop GUI application built with Electron for users who prefer a graphical interface.
+
+### Installation
+
+```bash
+npm install
+```
+
+### Running the GUI
+
+```bash
+npm run dev:gui
+```
+
+### Using the GUI
+
+**Live Testing:**
+1. Click "Show Config" to open the JSON editor
+2. Load an example or create your own configuration
+3. Click "Run Tests" to execute scenarios
+4. View real-time progress and results
+
+**Features:**
+- Split view with config editor and test runner
+- Monaco editor with syntax highlighting
+- Real-time validation and progress tracking
+- Console output and results summary
+
+### Building for Distribution
+
+```bash
+# Build and package
+npm run package
+
+# Platform-specific
+npm run package:mac     # macOS
+npm run package:win     # Windows
+npm run package:linux   # Linux
+```
+
+See [gui/README.md](gui/README.md) for detailed GUI documentation.
+
+---
+
 ## 🎯 Quick Navigation by Use Case
 
 ### "I want to test my chatbot live"

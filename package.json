@@ -2,7 +2,7 @@
   "name": "patience-chatbot",
   "version": "0.2.0-beta.2",
   "description": "Comprehensive chatbot testing framework with live testing, log analysis, and AI-powered adversarial testing",
-  "main": "dist/index.js",
+  "main": "dist-gui/gui/main/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "patience": "dist/cli.js"
@@ -12,7 +12,17 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "start": "node dist/cli.js",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build && npm test",
+    "dev:gui": "concurrently \"npm run dev:renderer\" \"npm run dev:electron\"",
+    "dev:renderer": "vite --config gui/renderer/vite.config.ts",
+    "dev:electron": "wait-on http://localhost:5555 && cross-env NODE_ENV=development npx electron .",
+    "build:gui": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "vite build --config gui/renderer/vite.config.ts",
+    "build:electron": "tsc -p gui/tsconfig.json",
+    "package": "npm run build && npm run build:gui && electron-builder",
+    "package:mac": "npm run package -- --mac",
+    "package:win": "npm run package -- --win",
+    "package:linux": "npm run package -- --linux"
   },
   "keywords": [
     "chatbot",
@@ -56,18 +66,38 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.0",
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
     "typescript": "^5.3.0",
-    "vitest": "^4.0.13"
+    "vite": "^5.0.0",
+    "vitest": "^4.0.13",
+    "wait-on": "^7.2.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.1",
+    "@monaco-editor/react": "^4.6.0",
+    "@tanstack/react-query": "^5.17.0",
     "axios": "^1.6.0",
+    "clsx": "^2.1.0",
     "fast-check": "^3.15.0",
     "js-yaml": "^4.1.1",
+    "lucide-react": "^0.303.0",
     "openai": "^6.9.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.0",
     "uuid": "^13.0.0",
-    "ws": "^8.16.0"
+    "ws": "^8.16.0",
+    "zustand": "^4.4.0"
   }
 }
