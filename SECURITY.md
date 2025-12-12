@@ -40,7 +40,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 - **Do not** share details on social media
 
 ### 2. Report Privately
-Send a detailed report to: **security@patience-app.com**
+Send a detailed report to: **security@chadbourne.consulting**
 
 Include:
 - Description of the vulnerability
@@ -202,7 +202,7 @@ Patience uses macOS App Sandbox with these entitlements:
 ## Contact Information
 
 ### Security Team
-- **Email**: security@patience-app.com
+- **Email**: security@chadbourne.consulting
 - **Response Time**: 48 hours for initial response
 - **Languages**: English
 
@@ -220,5 +220,6 @@ We thank the security research community for helping keep Patience secure. Speci
 
 ---
 
-**Last Updated**: 2025-01-15
+**Last Updated**: 2025-12-12
 **Version**: 1.0
+
