@@ -32,6 +32,12 @@ class AnalysisEngine {
             validationResults = validateConversations(filteredConversations, config: validationConfig)
         }
         
+        // Check context retention if configured
+        var contextAnalysis: ContextRetentionAnalysis?
+        if config.analysis.checkContextRetention {
+            contextAnalysis = analyzeContextRetention(filteredConversations)
+        }
+        
         let processingTime = Date().timeIntervalSince(startTime) * 1000 // Convert to milliseconds
         
         let summary = AnalysisSummary(
@@ -45,7 +51,8 @@ class AnalysisEngine {
             summary: summary,
             metrics: metrics,
             patterns: patterns,
-            validationResults: validationResults
+            validationResults: validationResults,
+            contextAnalysis: contextAnalysis
         )
     }
     
@@ -98,6 +105,85 @@ class AnalysisEngine {
         
         let passedCount = results.filter { $0.passed }.count
         return Double(passedCount) / Double(results.count)
+    }
+    
+    private func analyzeContextRetention(_ conversations: [ConversationHistory]) -> ContextRetentionAnalysis {
+        var totalScore: Double = 0
+        var topicSwitches = 0
+        var totalReferenceDistance: Double = 0
+        var referenceCount = 0
+        var contextBreaks = 0
+        
+        for conversation in conversations {
+            let messages = conversation.messages
+            guard messages.count > 2 else { continue }
+            
+            var conversationScore: Double = 0
+            
+            for i in 1..<messages.count {
+                let currentMessage = messages[i]
+                let previousMessage = messages[i - 1]
+                
+                // Extract key words from messages
+                let currentWords = extractKeyWords(from: currentMessage.content)
+                let previousWords = extractKeyWords(from: previousMessage.content)
+                
+                // Check for topic continuity
+                let overlap = currentWords.intersection(previousWords)
+                let continuityScore = Double(overlap.count) / Double(max(currentWords.count, 1))
+                conversationScore += continuityScore
+                
+                // Detect topic switches
+                if continuityScore < 0.2 && i > 1 {
+                    topicSwitches += 1
+                }
+                
+                // Check for references to earlier messages
+                for j in 0..<i-1 {
+                    let earlierMessage = messages[j]
+                    let earlierWords = extractKeyWords(from: earlierMessage.content)
+                    let referenceOverlap = currentWords.intersection(earlierWords)
+                    
+                    if !referenceOverlap.isEmpty {
+                        let distance = Double(i - j)
+                        totalReferenceDistance += distance
+                        referenceCount += 1
+                    }
+                }
+                
+                // Detect context breaks (bot doesn't understand reference)
+                if currentMessage.sender == .target {
+                    let confusionWords = ["what", "don't understand", "unclear", "repeat", "clarify"]
+                    let lowercased = currentMessage.content.lowercased()
+                    if confusionWords.contains(where: { lowercased.contains($0) }) {
+                        contextBreaks += 1
+                    }
+                }
+            }
+            
+            totalScore += conversationScore / Double(messages.count - 1)
+        }
+        
+        let averageScore = conversations.isEmpty ? 0 : totalScore / Double(conversations.count)
+        let averageDistance = referenceCount > 0 ? totalReferenceDistance / Double(referenceCount) : 0
+        
+        return ContextRetentionAnalysis(
+            averageContextScore: averageScore,
+            conversationsAnalyzed: conversations.count,
+            topicSwitches: topicSwitches,
+            averageReferenceDistance: averageDistance,
+            contextBreaks: contextBreaks
+        )
+    }
+    
+    private func extractKeyWords(from text: String) -> Set<String> {
+        let stopWords = Set(["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "from", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "i", "you", "he", "she", "it", "we", "they", "this", "that", "these", "those"])
+        
+        let words = text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count > 2 && !stopWords.contains($0) }
+        
+        return Set(words)
     }
 }
 
@@ -390,3 +476,4 @@ enum AnalysisError: Error, LocalizedError {
         }
     }
 }
+

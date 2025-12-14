@@ -14,6 +14,7 @@
 		07DF1E4D2EEC81B6004972E2 /* SECURITY.md in Resources */ = {isa = PBXBuildFile; fileRef = 07DF1E492EEC81B6004972E2 /* SECURITY.md */; };
 		07DF1E4E2EEC81B6004972E2 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 07DF1E472EEC81B6004972E2 /* LICENSE */; };
 		07DF1E4F2EEC81B6004972E2 /* CONTRIBUTING.md in Resources */ = {isa = PBXBuildFile; fileRef = 07DF1E452EEC81B6004972E2 /* CONTRIBUTING.md */; };
+		07F9A71E2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 07F9A71D2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md */; };
 		A1000001 /* PatienceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000 /* PatienceApp.swift */; };
 		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002 /* ContentView.swift */; };
 		A1000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000004 /* Assets.xcassets */; };
@@ -24,6 +25,8 @@
 		A1000011 /* AnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010 /* AnalysisEngine.swift */; };
 		A1000013 /* ReportGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012 /* ReportGenerator.swift */; };
 		A1000015 /* AdversarialTestOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014 /* AdversarialTestOrchestrator.swift */; };
+		A1000016A /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016B /* KeychainManager.swift */; };
+		A1000016D /* CustomValidators.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016C /* CustomValidators.swift */; };
 		A1000017 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016 /* SidebarView.swift */; };
 		A1000019 /* TestingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018 /* TestingView.swift */; };
 		A100001B /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001A /* AnalysisView.swift */; };
@@ -35,7 +38,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0790749D2EECA8F200A1DF93 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		07DF1E402EEBD7BB004972E2 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
 		07DF1E442EEC81B6004972E2 /* CHANGELOG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHANGELOG.md; sourceTree = SOURCE_ROOT; };
 		07DF1E452EEC81B6004972E2 /* CONTRIBUTING.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CONTRIBUTING.md; sourceTree = SOURCE_ROOT; };
@@ -43,6 +45,7 @@
 		07DF1E472EEC81B6004972E2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = SOURCE_ROOT; };
 		07DF1E482EEC81B6004972E2 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		07DF1E492EEC81B6004972E2 /* SECURITY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SECURITY.md; sourceTree = SOURCE_ROOT; };
+		07F9A71D2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AI_ASSISTANT_GUIDE.md; sourceTree = SOURCE_ROOT; };
 		A0FFFFFF /* Patience.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Patience.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000 /* PatienceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatienceApp.swift; sourceTree = "<group>"; };
 		A1000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -56,6 +59,8 @@
 		A1000012 /* ReportGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportGenerator.swift; sourceTree = "<group>"; };
 		A1000014 /* AdversarialTestOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdversarialTestOrchestrator.swift; sourceTree = "<group>"; };
 		A1000016 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		A1000016B /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
+		A1000016C /* CustomValidators.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomValidators.swift; sourceTree = "<group>"; };
 		A1000018 /* TestingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestingView.swift; sourceTree = "<group>"; };
 		A100001A /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
 		A100001C /* AdversarialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdversarialView.swift; sourceTree = "<group>"; };
@@ -81,7 +86,6 @@
 			children = (
 				A0FFFFF8 /* Patience */,
 				A0FFFFF7 /* Products */,
-				0790749D2EECA8F200A1DF93 /* KeychainManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -118,6 +122,7 @@
 				07DF1E472EEC81B6004972E2 /* LICENSE */,
 				07DF1E482EEC81B6004972E2 /* README.md */,
 				07DF1E492EEC81B6004972E2 /* SECURITY.md */,
+				07F9A71D2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md */,
 			);
 			path = "Preview Content";
 			sourceTree = "<group>";
@@ -139,6 +144,8 @@
 				A1000010 /* AnalysisEngine.swift */,
 				A1000012 /* ReportGenerator.swift */,
 				A1000014 /* AdversarialTestOrchestrator.swift */,
+				A1000016B /* KeychainManager.swift */,
+				A1000016C /* CustomValidators.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -224,6 +231,7 @@
 				07DF1E4F2EEC81B6004972E2 /* CONTRIBUTING.md in Resources */,
 				07DF1E412EEBD7BB004972E2 /* .swiftlint.yml in Resources */,
 				A1000008 /* Preview Assets.xcassets in Resources */,
+				07F9A71E2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md in Resources */,
 				A1000005 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -243,6 +251,8 @@
 				A1000011 /* AnalysisEngine.swift in Sources */,
 				A1000013 /* ReportGenerator.swift in Sources */,
 				A1000015 /* AdversarialTestOrchestrator.swift in Sources */,
+				A1000016A /* KeychainManager.swift in Sources */,
+				A1000016D /* CustomValidators.swift in Sources */,
 				A1000017 /* SidebarView.swift in Sources */,
 				A1000019 /* TestingView.swift in Sources */,
 				A100001B /* AnalysisView.swift in Sources */,

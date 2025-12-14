@@ -13,8 +13,7 @@ final class KeychainManager {
     ///   - key: The API key string to save.
     /// - Returns: True if the save operation was successful, false otherwise.
     func saveAPIKey(for id: AdversarialTestConfig.ID, key: String) -> Bool {
-        guard let account = id.uuidString.data(using: .utf8),
-              let keyData = key.data(using: .utf8) else {
+        guard let keyData = key.data(using: .utf8) else {
             return false
         }
 

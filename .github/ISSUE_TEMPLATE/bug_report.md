@@ -23,7 +23,7 @@ What actually happened.
 
 ## Environment
 - OS: [e.g., macOS, Linux, Windows]
-- Node.js version: [e.g., 18.0.0]
+- Swift version: [e.g., 18.0.0]
 - Patience version: [e.g., 0.1.0-beta.1]
 - Mode: [live testing / log analysis / adversarial testing]
 

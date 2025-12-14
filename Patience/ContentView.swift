@@ -22,6 +22,15 @@ struct ContentView: View {
             }
         }
         .navigationTitle("Patience")
+        .alert("Patience", isPresented: $appState.showError) {
+            Button("OK") {
+                appState.clearError()
+            }
+        } message: {
+            if let errorMessage = appState.errorMessage {
+                Text(errorMessage)
+            }
+        }
     }
     
     private func toggleSidebar() {

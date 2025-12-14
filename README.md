@@ -1,12 +1,16 @@
-# Patience
+# 😈 Patience
 
 A comprehensive native macOS application for chatbot testing with three powerful modes: live scenarios, log analysis, and AI-powered adversarial testing.
+
+[![macOS](https://img.shields.io/badge/macOS-13.0+-blue.svg)](https://www.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## Features
 
 ### 🚀 Live Testing
 - **Scenario-based Testing**: Create multi-step conversation flows with expected responses
-- **Protocol Support**: HTTP REST APIs with WebSocket support planned
+- **Protocol Support**: HTTP REST APIs and WebSocket for real-time communication
 - **Validation Types**: Exact matching, regex patterns, semantic similarity, and custom validators
 - **Realistic Timing**: Configurable delays to simulate human typing patterns
 - **Real-time Monitoring**: Live progress tracking and immediate feedback
@@ -24,8 +28,8 @@ A comprehensive native macOS application for chatbot testing with three powerful
 - **AI-Powered Testing**: Let AI models test your chatbot through realistic conversations
 - **Multiple Providers**: 
   - **Ollama** - Local models (llama2, mistral) - Free and private
-  - **OpenAI** - GPT-4, GPT-3.5 - Requires API key
-  - **Anthropic** - Claude 3 models - Requires API key
+  - **OpenAI** - GPT models - Requires API key
+  - **Anthropic** - Claude models - Requires API key
 - **Testing Strategies**:
   - **Exploratory** - Broad questions to map capabilities
   - **Adversarial** - Edge cases and challenging inputs
@@ -40,6 +44,12 @@ A comprehensive native macOS application for chatbot testing with three powerful
 - **Validation Analysis**: Pass/fail rates with detailed explanations
 - **Visual Summaries**: Charts and metrics for quick insights
 
+### 🔒 Security Features
+- **Secure API Key Storage**: API keys stored in macOS Keychain with encryption
+- **No Plaintext Secrets**: Keys never persisted in configuration files
+- **User Feedback**: Clear notifications if keychain operations fail
+- **Sandboxed Application**: Runs with macOS App Sandbox for security
+
 ## Requirements
 
 - **macOS 13.0** or later
@@ -48,38 +58,64 @@ A comprehensive native macOS application for chatbot testing with three powerful
 
 ## Installation
 
+⚠️ This project is under active development with weekly updates, aiming for a New Year’s release. 🧨
+
 ### Option 1: Download Release (Recommended)
-1. Download the latest release from the releases page
+1. Download the latest release from the [releases page](https://github.com/ServerWrestler/patience-chatbot/releases)
 2. Drag `Patience.app` to your Applications folder
 3. Launch Patience from Applications or Spotlight
 
 ### Option 2: Build from Source
-1. Clone this repository
-2. Open `Patience.xcodeproj` in Xcode
-3. Build and run (⌘+R)
+
+#### Initial Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ServerWrestler/patience-chatbot.git
+   cd patience-chatbot
+   ```
+
+2. **Build and Run**
+   ```bash
+   # Open in Xcode
+   open Patience.xcodeproj
+   
+   # Or build from command line
+   xcodebuild -project Patience.xcodeproj -scheme Patience build
+   ```
+
+3. **First Launch**
+   
+   On first launch, the application will:
+   - Create sample test configurations
+   - Set up default output paths at `~/Documents/Patience Reports`
+   - Initialize secure keychain storage for API keys
 
 ## Quick Start
 
 ### 1. Live Testing
 1. Click **"New Configuration"** in the Testing tab
-2. Enter your bot's endpoint URL
+2. Enter your bot's endpoint URL (e.g., `http://localhost:3000/chat`)
 3. Add conversation scenarios with expected responses
-4. Click **"Run Tests"** to execute
+4. Configure validation rules and timing
+5. Click **"Run Tests"** to execute
 
 ### 2. Log Analysis
 1. Switch to the **Analysis** tab
 2. Drag a log file onto the interface or click **"Import Log File"**
 3. Configure analysis options (metrics, patterns, context)
 4. View results in the interactive interface
+5. Export findings as reports
 
 ### 3. Adversarial Testing
 1. Go to the **Adversarial** tab
 2. Click **"New Configuration"**
-3. Set up your target bot and choose an AI provider
-4. Select a testing strategy and parameters
-5. Click **"Start Adversarial Testing"**
+3. Set up your target bot endpoint
+4. Choose an AI provider (Ollama for local, OpenAI/Anthropic for cloud)
+5. Select a testing strategy and parameters
+6. Click **"Start Adversarial Testing"**
 
-## Configuration
+## Configuration Examples
 
 ### Live Testing Configuration
 
@@ -132,3 +168,151 @@ A comprehensive native macOS application for chatbot testing with three powerful
     "verboseErrors": true
   }
 }
+```
+
+### Adversarial Testing Configuration
+
+```json
+{
+  "targetBot": {
+    "name": "Production Chatbot",
+    "protocol": "http",
+    "endpoint": "https://api.example.com/chat"
+  },
+  "adversarialBot": {
+    "provider": "ollama",
+    "model": "llama2",
+    "endpoint": "http://localhost:11434"
+  },
+  "conversation": {
+    "strategy": "adversarial",
+    "maxTurns": 10,
+    "goals": [
+      "Test error handling",
+      "Find edge cases",
+      "Verify context retention"
+    ]
+  },
+  "execution": {
+    "numConversations": 5,
+    "concurrent": 1
+  }
+}
+```
+
+## Architecture
+
+### Project Structure
+
+```
+Patience/
+├── Models/              # Data structures and types
+│   ├── AppState.swift   # Application state management
+│   └── Types.swift      # Configuration and result types
+├── Core/                # Business logic
+│   ├── TestExecutor.swift              # Live test execution
+│   ├── AnalysisEngine.swift            # Log analysis
+│   ├── ReportGenerator.swift           # Report generation
+│   ├── AdversarialTestOrchestrator.swift  # AI testing
+│   └── KeychainManager.swift           # Secure key storage
+├── Views/               # SwiftUI interface
+│   ├── TestingView.swift
+│   ├── AnalysisView.swift
+│   ├── AdversarialView.swift
+│   ├── ReportsView.swift
+│   └── SettingsView.swift
+├── ContentView.swift    # Main app view
+└── PatienceApp.swift    # App entry point
+```
+
+### Technology Stack
+
+- **Language**: Swift 5.9+
+- **Framework**: SwiftUI for native macOS GUI
+- **Platform**: macOS 13.0+
+- **Security**: Keychain Services for API key storage
+- **Concurrency**: Swift async/await with Sendable types
+- **Networking**: URLSession for HTTP communication
+
+## API Provider Setup
+
+### Ollama (Local, Free)
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Pull a model: `ollama pull llama2`
+3. Start Ollama (runs on `http://localhost:11434`)
+4. Select "Ollama" provider in Patience
+
+### OpenAI
+1. Get API key from [platform.openai.com](https://platform.openai.com)
+2. Select "OpenAI" provider in Patience
+3. Enter API key (stored securely in Keychain)
+4. Choose model (gpt-4, gpt-3.5-turbo)
+
+### Anthropic
+1. Get API key from [console.anthropic.com](https://console.anthropic.com)
+2. Select "Anthropic" provider in Patience
+3. Enter API key (stored securely in Keychain)
+4. Choose model (claude-3-opus, claude-3-sonnet)
+
+## Error Handling
+
+Patience includes comprehensive error handling:
+
+- **User-Facing Alerts**: All errors display in native macOS alerts
+- **Keychain Feedback**: Clear notifications if API key storage fails
+- **Detailed Logging**: Optional verbose logging for debugging
+- **Graceful Failures**: Operations continue when possible, with clear explanations
+
+## Troubleshooting
+
+### Connection Issues
+- Verify bot endpoint is accessible
+- Check firewall settings
+- Ensure correct protocol (http/https)
+
+### Keychain Access Denied
+- Grant Patience access in System Settings → Privacy & Security
+- API keys will be requested again on next use
+
+### Analysis Fails
+- Verify log file format (JSON, CSV, or text)
+- Check file permissions
+- Ensure file is not corrupted
+
+### Adversarial Testing Errors
+- Verify AI provider is running (Ollama) or API key is valid
+- Check network connectivity
+- Review safety settings (cost limits, rate limits)
+
+## Documentation
+
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Comprehensive feature documentation
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development and contribution guidelines
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
+- **[SECURITY.md](SECURITY.md)** - Security policies and reporting
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/ServerWrestler/patience-chatbot/issues)
+- **Wiki**: [Project Wiki](https://github.com/ServerWrestler/patience-chatbot/wiki)
+- **Discussions**: [GitHub Discussions](https://github.com/ServerWrestler/patience-chatbot/discussions)
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup
+- Coding standards
+- Pull request process
+- Testing guidelines
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built with Swift and SwiftUI
+- Uses macOS Keychain Services for secure storage
+- Supports Ollama, OpenAI, and Anthropic AI providers
+
+---

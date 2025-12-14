@@ -220,6 +220,6 @@ We thank the security research community for helping keep Patience secure. Speci
 
 ---
 
-**Last Updated**: 2025-12-12
+**Last Updated**: 2025-12-13
 **Version**: 1.0
 

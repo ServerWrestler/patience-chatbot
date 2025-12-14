@@ -11,9 +11,13 @@ struct TestConfigEditorView: View {
     @State private var botEndpoint = ""
     @State private var botProtocol: BotProtocol = .http
     @State private var botProvider: BotProvider = .generic
+    @State private var useAuthentication = false
+    @State private var authType: AuthType = .bearer
+    @State private var authCredentials = ""
     
     @State private var scenarios: [Scenario] = []
     @State private var showingScenarioEditor = false
+    @State private var editingScenario: Scenario? = nil
     
     @State private var validationType: ValidationType = .pattern
     @State private var semanticThreshold: Double = 0.8
@@ -31,6 +35,9 @@ struct TestConfigEditorView: View {
         self._botEndpoint = State(initialValue: initialConfig?.targetBot.endpoint ?? "")
         self._botProtocol = State(initialValue: initialConfig?.targetBot.botProtocol ?? .http)
         self._botProvider = State(initialValue: initialConfig?.targetBot.provider ?? .generic)
+        self._useAuthentication = State(initialValue: initialConfig?.targetBot.authentication != nil)
+        self._authType = State(initialValue: initialConfig?.targetBot.authentication?.type ?? .bearer)
+        self._authCredentials = State(initialValue: initialConfig?.targetBot.authentication?.credentials ?? "")
         self._scenarios = State(initialValue: initialConfig?.scenarios ?? [])
         self._validationType = State(initialValue: initialConfig?.validation.defaultType ?? .pattern)
         self._semanticThreshold = State(initialValue: initialConfig?.validation.semanticSimilarityThreshold ?? 0.8)
@@ -102,6 +109,34 @@ struct TestConfigEditorView: View {
                         }
                     }
 
+                    GroupBox("Authentication") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Toggle("Enable Authentication", isOn: $useAuthentication)
+                            
+                            if useAuthentication {
+                                LabeledContent("Auth Type") {
+                                    Picker("Auth Type", selection: $authType) {
+                                        ForEach(AuthType.allCases, id: \.self) { type in
+                                            Text(type.rawValue.capitalized).tag(type)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .frame(maxWidth: 300, alignment: .leading)
+                                }
+                                
+                                LabeledContent("Credentials") {
+                                    SecureField("API Key or Token", text: $authCredentials)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(maxWidth: 500)
+                                }
+                                
+                                Text("Credentials are stored securely and never logged")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+
                     GroupBox("Scenarios") {
                         VStack(alignment: .leading, spacing: 12) {
                             if scenarios.isEmpty {
@@ -119,7 +154,8 @@ struct TestConfigEditorView: View {
                                         }
                                         Spacer()
                                         Button("Edit") {
-                                            // TODO: open scenario editor for this scenario
+                                            editingScenario = scenario
+                                            showingScenarioEditor = true
                                         }
                                         .buttonStyle(.bordered)
                                     }
@@ -200,8 +236,13 @@ struct TestConfigEditorView: View {
             }
         }
         .sheet(isPresented: $showingScenarioEditor) {
-            ScenarioEditorView { scenario in
-                scenarios.append(scenario)
+            ScenarioEditorView(initialScenario: editingScenario) { scenario in
+                if let index = scenarios.firstIndex(where: { $0.id == scenario.id }) {
+                    scenarios[index] = scenario
+                } else {
+                    scenarios.append(scenario)
+                }
+                editingScenario = nil
             }
         }
     }
@@ -211,12 +252,16 @@ struct TestConfigEditorView: View {
     }
     
     private func buildConfiguration() -> TestConfig {
+        let authentication: AuthConfig? = useAuthentication && !authCredentials.isEmpty
+            ? AuthConfig(type: authType, credentials: authCredentials)
+            : nil
+        
         let config = TestConfig(
             targetBot: BotConfig(
                 name: botName,
                 botProtocol: botProtocol,
                 endpoint: botEndpoint,
-                authentication: nil,
+                authentication: authentication,
                 headers: nil,
                 provider: botProvider,
                 model: nil
@@ -248,12 +293,25 @@ struct TestConfigEditorView: View {
 
 struct ScenarioEditorView: View {
     @Environment(\.dismiss) private var dismiss
+    let initialScenario: Scenario?
     let onSave: (Scenario) -> Void
     
-    @State private var scenarioName = ""
-    @State private var scenarioDescription = ""
-    @State private var steps: [ConversationStep] = []
-    @State private var expectedOutcomes: [ValidationCriteria] = []
+    @State private var scenarioId: String
+    @State private var scenarioName: String
+    @State private var scenarioDescription: String
+    @State private var steps: [ConversationStep]
+    @State private var expectedOutcomes: [ValidationCriteria]
+    
+    init(initialScenario: Scenario? = nil, onSave: @escaping (Scenario) -> Void) {
+        self.initialScenario = initialScenario
+        self.onSave = onSave
+        
+        _scenarioId = State(initialValue: initialScenario?.id ?? UUID().uuidString)
+        _scenarioName = State(initialValue: initialScenario?.name ?? "")
+        _scenarioDescription = State(initialValue: initialScenario?.description ?? "")
+        _steps = State(initialValue: initialScenario?.steps ?? [])
+        _expectedOutcomes = State(initialValue: initialScenario?.expectedOutcomes ?? [])
+    }
     
     var body: some View {
         NavigationView {
@@ -361,7 +419,7 @@ struct ScenarioEditorView: View {
     
     private func saveScenario() {
         let scenario = Scenario(
-            id: UUID().uuidString,
+            id: scenarioId,
             name: scenarioName,
             description: scenarioDescription.isEmpty ? nil : scenarioDescription,
             steps: steps,

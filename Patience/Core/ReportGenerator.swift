@@ -57,32 +57,22 @@ class ReportGenerator {
     }
     
     private func formatAsJSON(_ report: TestReport) -> String {
-        // Create a sanitized copy of report with redacted sensitive data
-        let sanitizedScenarioResults = report.scenarioResults.map { scenario -> ScenarioResult in
-            let redactedMessages = scenario.conversationHistory.messages.map { message -> Message in
-                var redactedMessage = message
-                redactedMessage.content = redactSensitive(message.content)
-                return redactedMessage
+        // Sanitize sensitive data before encoding
+        var sanitizedReport = report
+        sanitizedReport.scenarioResults = report.scenarioResults.map { scenario in
+            var sanitized = scenario
+            sanitized.conversationHistory.messages = scenario.conversationHistory.messages.map { message in
+                var msg = message
+                msg.content = redactSensitive(message.content)
+                return msg
             }
-            let redactedValidationResults = scenario.validationResults.map { validation -> ValidationResult in
-                var redactedValidation = validation
-                redactedValidation.actual = redactSensitive(validation.actual)
-                return redactedValidation
+            sanitized.validationResults = scenario.validationResults.map { validation in
+                var val = validation
+                val.actual = redactSensitive(validation.actual)
+                return val
             }
-            var redactedScenario = scenario
-            redactedScenario.conversationHistory = ConversationHistory(messages: redactedMessages)
-            redactedScenario.validationResults = redactedValidationResults
-            return redactedScenario
+            return sanitized
         }
-        
-        let sanitizedReport = TestReport(
-            timestamp: report.timestamp,
-            totalScenarios: report.totalScenarios,
-            passedScenarios: report.passedScenarios,
-            failedScenarios: report.failedScenarios,
-            scenarioResults: sanitizedScenarioResults,
-            summary: report.summary
-        )
         
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

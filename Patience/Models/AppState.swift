@@ -10,6 +10,7 @@ class AppState: ObservableObject {
     @Published var analysisConfigs: [AnalysisConfig] = []
     @Published var testResults: [TestResults] = []
     @Published var analysisResults: [AnalysisResults] = []
+    @Published var adversarialResults: [AdversarialTestResults] = []
     @Published var reports: [TestReport] = []
     
     @Published var isRunningTest = false
@@ -19,13 +20,20 @@ class AppState: ObservableObject {
     @Published var currentTestProgress: Double = 0.0
     @Published var currentTestStatus: String = ""
     
+    // Error handling
+    @Published var errorMessage: String?
+    @Published var showError: Bool = false
+    
     // Settings
     @Published var defaultOutputPath: String = "~/Documents/Patience Reports"
     @Published var autoSaveConfigs: Bool = true
     @Published var showDetailedLogs: Bool = false
     
     init() {
-        loadSampleData()
+        loadConfigs()
+        if testConfigs.isEmpty {
+            loadSampleData()
+        }
     }
     
     // MARK: - Test Configuration Management
@@ -52,7 +60,10 @@ class AppState: ObservableObject {
     func addAdversarialConfig(_ config: AdversarialTestConfig) {
         var sanitized = config
         if let key = sanitized.adversarialBot.apiKey {
-            _ = KeychainManager.shared.saveAPIKey(for: sanitized.id, key: key)
+            let success = KeychainManager.shared.saveAPIKey(for: sanitized.id, key: key)
+            if !success {
+                showErrorMessage("Failed to securely save API key. The configuration will be saved without the API key.")
+            }
             sanitized.adversarialBot.apiKey = nil
         }
         adversarialConfigs.append(sanitized)
@@ -63,7 +74,10 @@ class AppState: ObservableObject {
         if let index = adversarialConfigs.firstIndex(where: { $0.id == config.id }) {
             var sanitized = config
             if let key = sanitized.adversarialBot.apiKey {
-                _ = KeychainManager.shared.saveAPIKey(for: sanitized.id, key: key)
+                let success = KeychainManager.shared.saveAPIKey(for: sanitized.id, key: key)
+                if !success {
+                    showErrorMessage("Failed to securely update API key. The configuration will be saved without the API key.")
+                }
                 sanitized.adversarialBot.apiKey = nil
             }
             adversarialConfigs[index] = sanitized
@@ -72,7 +86,10 @@ class AppState: ObservableObject {
     }
     
     func deleteAdversarialConfig(_ config: AdversarialTestConfig) {
-        _ = KeychainManager.shared.deleteAPIKey(for: config.id)
+        let success = KeychainManager.shared.deleteAPIKey(for: config.id)
+        if !success {
+            showErrorMessage("Failed to delete API key from secure storage. The configuration will still be removed.")
+        }
         adversarialConfigs.removeAll { $0.id == config.id }
         saveConfigs()
     }
@@ -126,7 +143,7 @@ class AppState: ObservableObject {
             reports.append(report)
             
         } catch {
-            print("Test execution failed: \(error)")
+            showErrorMessage("Test execution failed: \(error.localizedDescription)")
         }
     }
     
@@ -142,7 +159,7 @@ class AppState: ObservableObject {
             let results = try await analyzer.analyze(config: config)
             analysisResults.append(results)
         } catch {
-            print("Analysis failed: \(error)")
+            showErrorMessage("Analysis failed: \(error.localizedDescription)")
         }
     }
     
@@ -155,14 +172,91 @@ class AppState: ObservableObject {
         
         do {
             let orchestrator = AdversarialTestOrchestrator()
-            _ = try await orchestrator.run(config: config)
-            // Handle adversarial results
+            let conversations = try await orchestrator.run(config: config)
+            
+            // Store adversarial results
+            let result = AdversarialTestResults(
+                configId: config.id,
+                configName: config.targetBot.name,
+                timestamp: Date(),
+                conversations: conversations,
+                summary: AdversarialTestSummary(
+                    totalConversations: conversations.count,
+                    totalTurns: conversations.reduce(0) { $0 + $1.turns },
+                    averagePassRate: conversations.isEmpty ? 0 : conversations.map { $0.passRate }.reduce(0, +) / Double(conversations.count),
+                    averageDuration: conversations.isEmpty ? 0 : conversations.map { $0.duration }.reduce(0, +) / Double(conversations.count)
+                )
+            )
+            adversarialResults.append(result)
+            saveConfigs()
+            
+            showErrorMessage("Adversarial test completed with \(conversations.count) conversation(s).", isError: false)
         } catch {
-            print("Adversarial test failed: \(error)")
+            showErrorMessage("Adversarial test failed: \(error.localizedDescription)")
         }
     }
     
+    // MARK: - Error Handling
+    
+    func showErrorMessage(_ message: String, isError: Bool = true) {
+        errorMessage = message
+        showError = true
+        
+        if showDetailedLogs {
+            print(isError ? "❌ Error: \(message)" : "ℹ️ Info: \(message)")
+        }
+    }
+    
+    func clearError() {
+        errorMessage = nil
+        showError = false
+    }
+    
     // MARK: - Data Persistence
+    
+    private func loadConfigs() {
+        // Load test configs
+        if let data = UserDefaults.standard.data(forKey: "testConfigs"),
+           let decoded = try? JSONDecoder().decode([TestConfig].self, from: data) {
+            testConfigs = decoded
+        }
+        
+        // Load adversarial configs
+        if let data = UserDefaults.standard.data(forKey: "adversarialConfigs"),
+           let decoded = try? JSONDecoder().decode([AdversarialTestConfig].self, from: data) {
+            adversarialConfigs = decoded
+        }
+        
+        // Load analysis configs
+        if let data = UserDefaults.standard.data(forKey: "analysisConfigs"),
+           let decoded = try? JSONDecoder().decode([AnalysisConfig].self, from: data) {
+            analysisConfigs = decoded
+        }
+        
+        // Load test results
+        if let data = UserDefaults.standard.data(forKey: "testResults"),
+           let decoded = try? JSONDecoder().decode([TestResults].self, from: data) {
+            testResults = decoded
+        }
+        
+        // Load analysis results
+        if let data = UserDefaults.standard.data(forKey: "analysisResults"),
+           let decoded = try? JSONDecoder().decode([AnalysisResults].self, from: data) {
+            analysisResults = decoded
+        }
+        
+        // Load reports
+        if let data = UserDefaults.standard.data(forKey: "reports"),
+           let decoded = try? JSONDecoder().decode([TestReport].self, from: data) {
+            reports = decoded
+        }
+        
+        // Load adversarial results
+        if let data = UserDefaults.standard.data(forKey: "adversarialResults"),
+           let decoded = try? JSONDecoder().decode([AdversarialTestResults].self, from: data) {
+            adversarialResults = decoded
+        }
+    }
     
     private func saveConfigs() {
         guard autoSaveConfigs else { return }
@@ -179,6 +273,23 @@ class AppState: ObservableObject {
         
         if let encoded = try? JSONEncoder().encode(analysisConfigs) {
             UserDefaults.standard.set(encoded, forKey: "analysisConfigs")
+        }
+        
+        // Save results and reports
+        if let encoded = try? JSONEncoder().encode(testResults) {
+            UserDefaults.standard.set(encoded, forKey: "testResults")
+        }
+        
+        if let encoded = try? JSONEncoder().encode(analysisResults) {
+            UserDefaults.standard.set(encoded, forKey: "analysisResults")
+        }
+        
+        if let encoded = try? JSONEncoder().encode(reports) {
+            UserDefaults.standard.set(encoded, forKey: "reports")
+        }
+        
+        if let encoded = try? JSONEncoder().encode(adversarialResults) {
+            UserDefaults.standard.set(encoded, forKey: "adversarialResults")
         }
     }
     

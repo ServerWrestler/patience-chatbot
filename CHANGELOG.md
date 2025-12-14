@@ -8,14 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned Features
-- WebSocket protocol support for real-time communication
 - Advanced pattern detection with machine learning
-- Custom validation rule editor
+- Custom validation rule editor (visual interface)
 - Batch test execution
 - Test result comparison and diff views
 - Export to additional formats (PDF, Excel)
-- Dark mode support
 - Localization for multiple languages
+
+## [1.0.1] - 2025-12-13
+
+### Added
+- **WebSocket Protocol Support** - Full WebSocket communication for real-time bot testing
+- **AI Provider Implementations** - Complete OpenAI, Anthropic, and Ollama API integrations
+- **Semantic Validation** - NaturalLanguage framework integration for accurate semantic similarity
+- **Custom Validators** - 10 built-in validation rules (not_empty, contains_url, is_json, word_count, no_profanity, polite, has_greeting, has_farewell, is_question, is_statement)
+- **Authentication UI** - Visual configuration for Bearer, Basic, and API Key authentication
+- **Safety Controls** - Cost tracking and rate limiting for adversarial testing
+- **Context Retention Analysis** - Analyzes conversation coherence and topic continuity
+- **Configuration Persistence** - All configurations now persist across app restarts
+- **Adversarial Results Storage** - Full conversation history and metrics storage
+- **Scenario Editing** - Edit existing scenarios in visual editor
+
+### Enhanced
+- **Testing Strategies** - Improved prompts and logic for Exploratory, Adversarial, Focused, Stress, and Custom strategies
+- **Outcome Validation** - All validation types (exact, pattern, semantic, custom) now work for conversation outcomes
+- **Report Generation** - Fixed compilation issues and improved data sanitization
+
+### Fixed
+- Configuration loading on app startup
+- Report generator type mismatches
+- Adversarial test result persistence
+- Scenario editor not opening for existing scenarios
 
 ## [1.0.0] - 2025-12-12
 
@@ -177,8 +200,8 @@ This Swift version provides:
 
 ### Known Limitations
 
-- WebSocket protocol support planned for future release
-- Custom validation rules require code changes (visual editor planned)
+- Visual custom validation rule editor planned for future release
+- Advanced ML-based pattern detection planned for future release
 - Limited to macOS platform (cross-platform support not planned)
 
 ## Development Information
@@ -224,5 +247,3 @@ For issues, questions, or feature requests:
 3. Open a new issue with detailed information
 
 ---
-
-**Last Updated**: 2025-12-12

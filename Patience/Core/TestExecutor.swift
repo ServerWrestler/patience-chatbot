@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 class TestExecutor {
     private let communicationManager = CommunicationManager()
@@ -235,8 +236,42 @@ class CommunicationManager {
     }
     
     private func sendWebSocketMessage(_ message: String, to bot: BotConfig) async throws -> BotResponse {
-        // WebSocket implementation would go here
-        throw TestError.notImplemented("WebSocket support")
+        guard let url = URL(string: bot.endpoint) else {
+            throw TestError.invalidEndpoint
+        }
+        
+        let webSocketTask = URLSession.shared.webSocketTask(with: url)
+        webSocketTask.resume()
+        
+        // Send message
+        let wsMessage = URLSessionWebSocketTask.Message.string(message)
+        try await webSocketTask.send(wsMessage)
+        
+        let startTime = Date()
+        
+        // Receive response
+        let response = try await webSocketTask.receive()
+        let responseTime = Date().timeIntervalSince(startTime)
+        
+        let content: String
+        switch response {
+        case .string(let text):
+            content = text
+        case .data(let data):
+            content = String(data: data, encoding: .utf8) ?? ""
+        @unknown default:
+            content = ""
+        }
+        
+        webSocketTask.cancel(with: .goingAway, reason: nil)
+        
+        return BotResponse(
+            content: content,
+            timestamp: Date(),
+            metadata: nil,
+            error: nil,
+            responseTime: responseTime
+        )
     }
 }
 
@@ -259,19 +294,39 @@ class ResponseValidator {
         let conversationText = messages.map { $0.content }.joined(separator: " ")
         
         switch criteria.type {
+        case .exact:
+            return validateExactInText(text: conversationText, expected: criteria.expected)
         case .pattern:
             return validatePatternInText(text: conversationText, pattern: criteria.expected)
         case .semantic:
             return validateSemanticInText(text: conversationText, expected: criteria.expected, threshold: criteria.threshold ?? 0.8)
-        default:
-            return ValidationResult(
-                passed: true,
-                expected: criteria.expected,
-                actual: conversationText,
-                message: "Outcome validation not implemented for type: \(criteria.type)",
-                details: nil
-            )
+        case .custom:
+            return validateCustomInText(text: conversationText, validator: criteria.expected)
         }
+    }
+    
+    private func validateExactInText(text: String, expected: String) -> ValidationResult {
+        let passed = text.lowercased().contains(expected.lowercased())
+        
+        return ValidationResult(
+            passed: passed,
+            expected: expected,
+            actual: text,
+            message: passed ? "Expected text found in conversation" : "Expected text not found in conversation",
+            details: nil
+        )
+    }
+    
+    private func validateCustomInText(text: String, validator: String) -> ValidationResult {
+        // Create a mock response for custom validation
+        let mockResponse = BotResponse(
+            content: text,
+            timestamp: Date(),
+            metadata: nil,
+            error: nil,
+            responseTime: nil
+        )
+        return CustomValidators.validate(response: mockResponse, validatorName: validator)
     }
     
     private func validateExact(response: BotResponse, expected: String) -> ValidationResult {
@@ -313,8 +368,8 @@ class ResponseValidator {
     }
     
     private func validateSemantic(response: BotResponse, expected: String, threshold: Double) -> ValidationResult {
-        // Simplified semantic similarity - in a real implementation, you'd use ML models
-        let similarity = calculateSimpleSimilarity(response.content, expected)
+        // Use NaturalLanguage framework for semantic similarity
+        let similarity = calculateSemanticSimilarity(response.content, expected)
         let passed = similarity >= threshold
         
         return ValidationResult(
@@ -322,19 +377,49 @@ class ResponseValidator {
             expected: expected,
             actual: response.content,
             message: passed ? "Semantic similarity above threshold" : "Semantic similarity below threshold",
-            details: ["similarity": String(similarity), "threshold": String(threshold)]
+            details: ["similarity": String(format: "%.3f", similarity), "threshold": String(threshold)]
         )
     }
     
+    private func calculateSemanticSimilarity(_ text1: String, _ text2: String) -> Double {
+        // Use NaturalLanguage framework for better semantic analysis
+        let embedding = NLEmbedding.wordEmbedding(for: .english)
+        
+        // Get embeddings for both texts
+        guard let vector1 = embedding?.vector(for: text1.lowercased()),
+              let vector2 = embedding?.vector(for: text2.lowercased()) else {
+            // Fallback to simple similarity if embeddings not available
+            return calculateSimpleSimilarity(text1, text2)
+        }
+        
+        // Calculate cosine similarity
+        var dotProduct: Double = 0
+        var magnitude1: Double = 0
+        var magnitude2: Double = 0
+        
+        for i in 0..<min(vector1.count, vector2.count) {
+            dotProduct += Double(vector1[i]) * Double(vector2[i])
+            magnitude1 += Double(vector1[i]) * Double(vector1[i])
+            magnitude2 += Double(vector2[i]) * Double(vector2[i])
+        }
+        
+        magnitude1 = sqrt(magnitude1)
+        magnitude2 = sqrt(magnitude2)
+        
+        guard magnitude1 > 0 && magnitude2 > 0 else {
+            return calculateSimpleSimilarity(text1, text2)
+        }
+        
+        let cosineSimilarity = dotProduct / (magnitude1 * magnitude2)
+        
+        // Normalize to 0-1 range (cosine similarity is -1 to 1)
+        return (cosineSimilarity + 1) / 2
+    }
+    
     private func validateCustom(response: BotResponse, validator: String) -> ValidationResult {
-        // Custom validation would be implemented here
-        return ValidationResult(
-            passed: false,
-            expected: validator,
-            actual: response.content,
-            message: "Custom validation not implemented",
-            details: nil
-        )
+        // Custom validation using predefined validators
+        let result = CustomValidators.validate(response: response, validatorName: validator)
+        return result
     }
     
     private func validatePatternInText(text: String, pattern: String) -> ValidationResult {
@@ -364,7 +449,7 @@ class ResponseValidator {
     }
     
     private func validateSemanticInText(text: String, expected: String, threshold: Double) -> ValidationResult {
-        let similarity = calculateSimpleSimilarity(text, expected)
+        let similarity = calculateSemanticSimilarity(text, expected)
         let passed = similarity >= threshold
         
         return ValidationResult(
@@ -372,7 +457,7 @@ class ResponseValidator {
             expected: expected,
             actual: text,
             message: passed ? "Semantic similarity above threshold" : "Semantic similarity below threshold",
-            details: ["similarity": String(similarity), "threshold": String(threshold)]
+            details: ["similarity": String(format: "%.3f", similarity), "threshold": String(threshold)]
         )
     }
     

@@ -17,5 +17,5 @@ Thank you for your interest in contributing to Patience! This document provides 
 1. **Fork the repository**
    ```bash
    # Fork on GitHub, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/patience-swift.git
-   cd patience-swift
+   git clone https://github.com/YOUR_USERNAME/patience-chatbot.git
+   cd patience-chatbot

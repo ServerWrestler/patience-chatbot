@@ -133,7 +133,7 @@ struct ValidationResult: Codable, Identifiable, Sendable {
     var id: UUID = UUID()
     let passed: Bool
     let expected: String?
-    let actual: String
+    var actual: String
     let message: String?
     let details: [String: String]?
 }
@@ -151,7 +151,7 @@ struct ConversationHistory: Codable, Identifiable, Sendable {
 struct ConversationMessage: Codable, Identifiable, Sendable {
     var id: UUID = UUID()
     let sender: MessageSender
-    let content: String
+    var content: String
     let timestamp: Date
     var validationResult: ValidationResult?
 }
@@ -203,7 +203,7 @@ struct TestReport: Codable, Identifiable, Sendable {
     let totalScenarios: Int
     let passedScenarios: Int
     let failedScenarios: Int
-    let scenarioResults: [ScenarioResult]
+    var scenarioResults: [ScenarioResult]
     let summary: String
 }
 
@@ -332,6 +332,15 @@ struct AnalysisResults: Codable, Identifiable, Sendable {
     let metrics: AnalysisMetrics?
     let patterns: [DetectedPattern]?
     let validationResults: [ValidationResult]?
+    let contextAnalysis: ContextRetentionAnalysis?
+}
+
+struct ContextRetentionAnalysis: Codable, Sendable {
+    let averageContextScore: Double
+    let conversationsAnalyzed: Int
+    let topicSwitches: Int
+    let averageReferenceDistance: Double
+    let contextBreaks: Int
 }
 
 struct AnalysisSummary: Codable, Sendable {
@@ -353,5 +362,65 @@ struct DetectedPattern: Codable, Identifiable, Sendable {
     let pattern: String
     let frequency: Int
     let confidence: Double
+}
+
+// MARK: - Adversarial Test Results
+
+struct AdversarialTestResults: Codable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    let configId: UUID
+    let configName: String
+    let timestamp: Date
+    let conversations: [ConversationResult]
+    let summary: AdversarialTestSummary
+}
+
+struct AdversarialTestSummary: Codable, Sendable {
+    let totalConversations: Int
+    let totalTurns: Int
+    let averagePassRate: Double
+    let averageDuration: Double
+}
+
+struct ConversationResult: Codable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    let conversationId: String
+    let timestamp: Date
+    let messages: [AdversarialMessage]
+    let turns: Int
+    let duration: Double
+    let validationResults: [ValidationResult]
+    let passRate: Double
+    let metrics: ConversationMetrics
+    let terminationReason: TerminationReason
+    let terminationMessage: String?
+}
+
+struct AdversarialMessage: Codable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    let role: MessageRole
+    let content: String
+    let timestamp: Date
+    let metadata: [String: String]?
+}
+
+enum MessageRole: String, Codable, Sendable {
+    case adversarial = "adversarial"
+    case target = "target"
+}
+
+struct ConversationMetrics: Codable, Sendable {
+    let avgResponseTime: Double
+    let targetBotResponseRate: Double
+    let conversationQuality: Double
+}
+
+enum TerminationReason: String, Codable, Sendable {
+    case max_turns = "max_turns"
+    case goal_achieved = "goal_achieved"
+    case timeout = "timeout"
+    case error = "error"
+    case manual = "manual"
+    case adversarial_ended = "adversarial_ended"
 }
 
