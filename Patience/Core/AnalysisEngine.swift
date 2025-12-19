@@ -1,10 +1,48 @@
 import Foundation
 
+/// Analyzes conversation logs to extract insights, metrics, and patterns
+/// This is the main engine for log analysis functionality
+/// 
+/// Capabilities:
+/// - Loads conversation logs from JSON, CSV, or text files
+/// - Calculates metrics (message counts, response times, etc.)
+/// - Detects patterns (greetings, questions, errors)
+/// - Validates conversations against rules
+/// - Analyzes context retention (how well bot remembers earlier messages)
+/// 
+/// Typical workflow:
+/// 1. Load conversations from log file
+/// 2. Apply filters (date range, minimum messages)
+/// 3. Calculate metrics if enabled
+/// 4. Detect patterns if enabled
+/// 5. Run validation if configured
+/// 6. Analyze context retention if enabled
+/// 7. Return comprehensive results
 class AnalysisEngine {
+    /// Loads and parses conversation logs from various file formats
     private let logLoader = LogLoader()
+    
+    /// Calculates statistical metrics from conversations
     private let metricsCalculator = MetricsCalculator()
+    
+    /// Detects common patterns in conversation data
     private let patternDetector = PatternDetector()
     
+    /// Performs complete analysis of conversation logs
+    /// This is the main entry point for log analysis
+    /// 
+    /// - Parameter config: Configuration specifying what to analyze and how
+    /// - Returns: AnalysisResults with metrics, patterns, validations, and context analysis
+    /// - Throws: AnalysisError if file not found, invalid format, or parsing fails
+    /// 
+    /// Process:
+    /// 1. Load conversations from log file (JSON/CSV/text)
+    /// 2. Apply filters (date range, minimum messages)
+    /// 3. Calculate metrics if config.analysis.calculateMetrics is true
+    /// 4. Detect patterns if config.analysis.detectPatterns is true
+    /// 5. Run validation if config.validation is set
+    /// 6. Analyze context retention if config.analysis.checkContextRetention is true
+    /// 7. Build summary with pass rates and processing time
     func analyze(config: AnalysisConfig) async throws -> AnalysisResults {
         let startTime = Date()
         
@@ -56,6 +94,16 @@ class AnalysisEngine {
         )
     }
     
+    /// Filters conversations based on configured criteria
+    /// 
+    /// - Parameters:
+    ///   - conversations: All loaded conversations
+    ///   - filters: Optional filter criteria (date range, minimum messages)
+    /// - Returns: Filtered conversations that meet all criteria
+    /// 
+    /// Supported filters:
+    /// - dateRange: Only include conversations within start/end dates
+    /// - minMessages: Only include conversations with at least N messages
     private func applyFilters(_ conversations: [ConversationHistory], filters: AnalysisFilters?) -> [ConversationHistory] {
         guard let filters = filters else { return conversations }
         
@@ -76,6 +124,17 @@ class AnalysisEngine {
         return filtered
     }
     
+    /// Validates conversations against configured rules
+    /// Currently checks that conversations have meaningful content
+    /// 
+    /// - Parameters:
+    ///   - conversations: Conversations to validate
+    ///   - config: Validation configuration with rules
+    /// - Returns: Array of validation results, one per conversation
+    /// 
+    /// Current validation:
+    /// - Checks that conversation text is not empty
+    /// - Can be extended with custom validation rules
     private func validateConversations(_ conversations: [ConversationHistory], config: ValidationConfig) -> [ValidationResult] {
         var results: [ValidationResult] = []
         
@@ -100,6 +159,12 @@ class AnalysisEngine {
         return results
     }
     
+    /// Calculates the percentage of validations that passed
+    /// 
+    /// - Parameter validationResults: Optional array of validation results
+    /// - Returns: Pass rate from 0.0 to 1.0 (1.0 = 100% passed, 0.0 = all failed)
+    /// 
+    /// Returns 1.0 if no validation results (nothing failed)
     private func calculatePassRate(_ validationResults: [ValidationResult]?) -> Double {
         guard let results = validationResults, !results.isEmpty else { return 1.0 }
         
@@ -107,6 +172,19 @@ class AnalysisEngine {
         return Double(passedCount) / Double(results.count)
     }
     
+    /// Analyzes how well the bot retains context from earlier in the conversation
+    /// Measures the bot's ability to remember and reference previous messages
+    /// 
+    /// - Parameter conversations: Conversations to analyze
+    /// - Returns: ContextRetentionAnalysis with scores and metrics
+    /// 
+    /// Analysis includes:
+    /// - averageContextScore: How much word overlap between consecutive messages (0-1)
+    /// - topicSwitches: Number of times topic changed abruptly
+    /// - averageReferenceDistance: How far back the bot references earlier messages
+    /// - contextBreaks: Times bot showed confusion about earlier context
+    /// 
+    /// Higher context score = better memory and coherence
     private func analyzeContextRetention(_ conversations: [ConversationHistory]) -> ContextRetentionAnalysis {
         var totalScore: Double = 0
         var topicSwitches = 0
@@ -176,6 +254,14 @@ class AnalysisEngine {
         )
     }
     
+    /// Extracts meaningful keywords from text by removing stop words
+    /// Used for context retention analysis to find topic overlap
+    /// 
+    /// - Parameter text: Text to extract keywords from
+    /// - Returns: Set of lowercase keywords (3+ characters, not stop words)
+    /// 
+    /// Stop words removed: the, a, an, and, or, but, in, on, at, to, for, etc.
+    /// Only keeps words with 3+ characters
     private func extractKeyWords(from text: String) -> Set<String> {
         let stopWords = Set(["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "from", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "can", "i", "you", "he", "she", "it", "we", "they", "this", "that", "these", "those"])
         
@@ -187,7 +273,21 @@ class AnalysisEngine {
     }
 }
 
+/// Loads conversation logs from various file formats
+/// Supports JSON, CSV, text, and auto-detection
+/// Handles different JSON structures (array of conversations, single conversation, array of messages)
 class LogLoader {
+    /// Loads conversations from a log file
+    /// 
+    /// - Parameter source: Log source with file path and format
+    /// - Returns: Array of parsed conversations
+    /// - Throws: AnalysisError if file not found or parsing fails
+    /// 
+    /// Supported formats:
+    /// - .json: Parses as ConversationHistory array, single conversation, or message array
+    /// - .csv: Parses CSV with timestamp, sender, content columns
+    /// - .text: Parses plain text with alternating user/bot messages
+    /// - .auto: Detects format from file extension or tries all parsers
     func loadConversations(from source: LogSource) async throws -> [ConversationHistory] {
         let url = URL(fileURLWithPath: NSString(string: source.path).expandingTildeInPath)
         
@@ -209,6 +309,17 @@ class LogLoader {
         }
     }
     
+    /// Parses JSON log data into conversations
+    /// Tries multiple JSON structures to be flexible
+    /// 
+    /// - Parameter data: Raw JSON data
+    /// - Returns: Array of conversations
+    /// - Throws: AnalysisError if no valid JSON structure found
+    /// 
+    /// Tries in order:
+    /// 1. Array of ConversationHistory objects
+    /// 2. Single ConversationHistory object
+    /// 3. Array of ConversationMessage objects (creates single conversation)
     private func parseJSONLog(_ data: Data) throws -> [ConversationHistory] {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -237,6 +348,16 @@ class LogLoader {
         throw AnalysisError.invalidFormat("Unable to parse JSON log file")
     }
     
+    /// Parses CSV log data into a single conversation
+    /// 
+    /// - Parameter data: Raw CSV data
+    /// - Returns: Array with one conversation containing all messages
+    /// - Throws: AnalysisError if CSV is invalid or empty
+    /// 
+    /// Expected CSV format:
+    /// - Header row (skipped)
+    /// - Data rows: timestamp, sender, content
+    /// - Sender containing "bot" is treated as target, otherwise patience
     private func parseCSVLog(_ data: Data) throws -> [ConversationHistory] {
         guard let content = String(data: data, encoding: .utf8) else {
             throw AnalysisError.invalidFormat("Unable to read CSV file as UTF-8")
@@ -281,6 +402,18 @@ class LogLoader {
         return [conversation]
     }
     
+    /// Parses plain text log into a single conversation
+    /// Assumes alternating user/bot messages
+    /// 
+    /// - Parameter data: Raw text data
+    /// - Returns: Array with one conversation
+    /// - Throws: AnalysisError if text cannot be read as UTF-8
+    /// 
+    /// Format:
+    /// - Each non-empty line is a message
+    /// - Even lines (0, 2, 4...) are from patience
+    /// - Odd lines (1, 3, 5...) are from target bot
+    /// - Timestamps are fake (1 minute apart)
     private func parseTextLog(_ data: Data) throws -> [ConversationHistory] {
         guard let content = String(data: data, encoding: .utf8) else {
             throw AnalysisError.invalidFormat("Unable to read text file as UTF-8")
@@ -310,6 +443,20 @@ class LogLoader {
         return [conversation]
     }
     
+    /// Auto-detects log format and parses accordingly
+    /// First tries file extension, then tries all parsers
+    /// 
+    /// - Parameters:
+    ///   - data: Raw log data
+    ///   - url: File URL (used to check extension)
+    /// - Returns: Array of conversations
+    /// - Throws: AnalysisError if all parsing attempts fail
+    /// 
+    /// Detection order:
+    /// 1. Check file extension (.json, .csv, .txt, .log)
+    /// 2. Try JSON parser
+    /// 3. Try CSV parser
+    /// 4. Try text parser
     private func parseAutoDetectLog(_ data: Data, url: URL) throws -> [ConversationHistory] {
         let fileExtension = url.pathExtension.lowercased()
         
@@ -333,7 +480,18 @@ class LogLoader {
     }
 }
 
+/// Calculates statistical metrics from conversation data
+/// Provides quantitative analysis of conversation patterns
 class MetricsCalculator {
+    /// Calculates metrics from conversations
+    /// 
+    /// - Parameter conversations: Conversations to analyze
+    /// - Returns: AnalysisMetrics with calculated values
+    /// 
+    /// Metrics calculated:
+    /// - totalMessages: Sum of all messages across all conversations
+    /// - averageMessagesPerConversation: Mean messages per conversation
+    /// - averageResponseTime: Mean response time if available in validation results
     func calculate(from conversations: [ConversationHistory]) -> AnalysisMetrics {
         let totalMessages = conversations.reduce(0) { $0 + $1.messages.count }
         let averageMessagesPerConversation = conversations.isEmpty ? 0.0 : Double(totalMessages) / Double(conversations.count)
@@ -362,7 +520,18 @@ class MetricsCalculator {
     }
 }
 
+/// Detects common patterns in conversation data
+/// Identifies recurring behaviors and message types
 class PatternDetector {
+    /// Detects patterns across all conversations
+    /// 
+    /// - Parameter conversations: Conversations to analyze
+    /// - Returns: Array of detected patterns with frequency and confidence
+    /// 
+    /// Patterns detected:
+    /// - Greeting patterns (hello, hi, hey, etc.)
+    /// - Question patterns (messages ending with ?)
+    /// - Error patterns (error, sorry, can't, unable, etc.)
     func detectPatterns(in conversations: [ConversationHistory]) -> [DetectedPattern] {
         var patterns: [DetectedPattern] = []
         
@@ -387,6 +556,14 @@ class PatternDetector {
         return patterns
     }
     
+    /// Detects greeting patterns in conversations
+    /// Looks for common greeting words in patience messages
+    /// 
+    /// - Parameter conversations: Conversations to analyze
+    /// - Returns: DetectedPattern if greetings found, nil otherwise
+    /// 
+    /// Greeting words: hello, hi, hey, greetings, good morning, good afternoon
+    /// Confidence: Ratio of conversations with greetings to total conversations
     private func detectGreetingPatterns(in conversations: [ConversationHistory]) -> DetectedPattern? {
         let greetingWords = ["hello", "hi", "hey", "greetings", "good morning", "good afternoon"]
         var greetingCount = 0
@@ -413,6 +590,14 @@ class PatternDetector {
         )
     }
     
+    /// Detects question patterns in conversations
+    /// Counts messages from patience that contain question marks
+    /// 
+    /// - Parameter conversations: Conversations to analyze
+    /// - Returns: DetectedPattern if questions found, nil otherwise
+    /// 
+    /// Simple detection: Any message with "?" is counted as a question
+    /// Confidence: Fixed at 0.9 (high confidence in this simple pattern)
     private func detectQuestionPatterns(in conversations: [ConversationHistory]) -> DetectedPattern? {
         var questionCount = 0
         
@@ -434,6 +619,14 @@ class PatternDetector {
         )
     }
     
+    /// Detects error patterns in target bot responses
+    /// Looks for error-related words in bot messages
+    /// 
+    /// - Parameter conversations: Conversations to analyze
+    /// - Returns: DetectedPattern if errors found, nil otherwise
+    /// 
+    /// Error words: error, sorry, can't, unable, failed, problem
+    /// Confidence: Fixed at 0.8 (fairly confident but some false positives possible)
     private func detectErrorPatterns(in conversations: [ConversationHistory]) -> DetectedPattern? {
         let errorWords = ["error", "sorry", "can't", "unable", "failed", "problem"]
         var errorCount = 0
@@ -460,6 +653,8 @@ class PatternDetector {
     }
 }
 
+/// Errors that can occur during log analysis
+/// LocalizedError: Provides user-friendly error messages
 enum AnalysisError: Error, LocalizedError {
     case fileNotFound(String)
     case invalidFormat(String)

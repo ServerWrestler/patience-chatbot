@@ -41,6 +41,7 @@ Copy and paste this section when starting a new conversation with an AI assistan
 - Mark UI code with @MainActor
 - Use @Published for state that triggers UI updates
 - Never store API keys in configs (use Keychain)
+- **ALL code must have comprehensive comments** (see Code Documentation Standards below)
 
 ---
 
@@ -268,6 +269,52 @@ func addConfig(_ config: Config) {
 - Extensions can't redeclare existing properties
 - Remove duplicate or conflicting declarations
 
+## 📝 Code Documentation Standards
+
+**ALL code must include comprehensive comments for new Swift programmers:**
+
+### File-Level Comments
+- Start each file with a comment explaining its purpose
+- List main types/classes defined in the file
+- Explain how it fits into the overall architecture
+
+### Type/Class Comments
+- Document what the type represents
+- Explain its role in the application
+- Note any important protocols it conforms to
+
+### Function Comments
+- Explain what the function does (not just how)
+- Document parameters and return values
+- Note any side effects or state changes
+- Explain error conditions
+
+### Property Comments
+- Document non-obvious properties
+- Explain @State, @Published, @EnvironmentObject usage
+- Note default values and their significance
+
+### Example:
+```swift
+/// Manages the application's global state
+/// Contains all test configurations, results, and user settings
+/// Marked with @MainActor to ensure all UI updates happen on main thread
+@MainActor
+class AppState: ObservableObject {
+    /// Array of test configurations created by the user
+    /// @Published triggers UI updates when this changes
+    /// Persisted to UserDefaults via saveConfigs()
+    @Published var testConfigs: [TestConfig] = []
+    
+    /// Saves all configurations to persistent storage
+    /// Called automatically after any config changes
+    /// Uses UserDefaults for configs, Keychain for API keys
+    func saveConfigs() {
+        // Implementation...
+    }
+}
+```
+
 ## 📝 Code Review Checklist
 
 When asking AI to review code, request checks for:
@@ -282,6 +329,7 @@ When asking AI to review code, request checks for:
 - [ ] Naming follows conventions
 - [ ] No force unwraps (use guard/if let)
 - [ ] Proper memory management (no retain cycles)
+- [ ] **Comprehensive comments for all code** (see Code Documentation Standards)
 
 ## 🚀 Testing Prompts
 

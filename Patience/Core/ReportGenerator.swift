@@ -1,6 +1,33 @@
 import Foundation
 
+/// Generates formatted test reports from test results
+/// Supports multiple output formats: JSON, HTML, and Markdown
+/// 
+/// Key features:
+/// - Converts TestResults into formatted reports
+/// - Sanitizes sensitive data (API keys, tokens) before output
+/// - Generates professional HTML reports with styling
+/// - Creates machine-readable JSON reports
+/// - Produces human-readable Markdown reports
+/// 
+/// All reports include:
+/// - Summary statistics (pass/fail counts, pass rate)
+/// - Individual scenario results
+/// - Conversation history
+/// - Validation results
+/// - Error messages
 class ReportGenerator {
+    /// Generates a TestReport from test execution results
+    /// This is the main entry point for report generation
+    /// 
+    /// - Parameter results: Test results from TestExecutor
+    /// - Returns: TestReport with summary and scenario results
+    /// 
+    /// The report includes:
+    /// - Timestamp of report generation
+    /// - Total/passed/failed scenario counts
+    /// - All scenario results with conversation history
+    /// - Text summary of the test run
     func generateReport(from results: TestResults) -> TestReport {
         let summary = generateSummary(from: results)
         
@@ -14,6 +41,17 @@ class ReportGenerator {
         )
     }
     
+    /// Formats a report in the specified format
+    /// 
+    /// - Parameters:
+    ///   - report: The report to format
+    ///   - format: Output format (json, html, markdown)
+    /// - Returns: Formatted report as a string
+    /// 
+    /// Format details:
+    /// - .json: Machine-readable JSON with pretty printing
+    /// - .html: Professional HTML with CSS styling and colors
+    /// - .markdown: Human-readable Markdown with tables and formatting
     func formatReport(_ report: TestReport, format: ReportFormat) -> String {
         switch format {
         case .json:
@@ -25,6 +63,16 @@ class ReportGenerator {
         }
     }
     
+    /// Generates a text summary of test results
+    /// 
+    /// - Parameter results: Test results to summarize
+    /// - Returns: Multi-line text summary
+    /// 
+    /// Summary includes:
+    /// - Test run ID and timestamps
+    /// - Duration of test execution
+    /// - Pass/fail counts and pass rate percentage
+    /// - List of failed scenarios with error messages
     private func generateSummary(from results: TestResults) -> String {
         let passRate = results.summary.passRate * 100
         let duration = results.endTime?.timeIntervalSince(results.startTime) ?? 0
@@ -56,6 +104,18 @@ class ReportGenerator {
         return summary
     }
     
+    /// Formats report as JSON
+    /// 
+    /// - Parameter report: Report to format
+    /// - Returns: Pretty-printed JSON string
+    /// 
+    /// Features:
+    /// - Sanitizes sensitive data before encoding
+    /// - Uses ISO8601 date format
+    /// - Pretty-printed with sorted keys for readability
+    /// - Redacts long strings that might be API keys/tokens
+    /// 
+    /// Safe to share: All sensitive data is replaced with "***REDACTED***"
     private func formatAsJSON(_ report: TestReport) -> String {
         // Sanitize sensitive data before encoding
         var sanitizedReport = report
@@ -86,6 +146,21 @@ class ReportGenerator {
         }
     }
     
+    /// Formats report as HTML with professional styling
+    /// 
+    /// - Parameter report: Report to format
+    /// - Returns: Complete HTML document with embedded CSS
+    /// 
+    /// HTML features:
+    /// - Responsive grid layout for metrics
+    /// - Color-coded pass/fail indicators (green/red)
+    /// - Pass rate color changes based on threshold (green ≥80%, orange ≥60%, red <60%)
+    /// - Expandable scenario cards with conversation history
+    /// - User messages in blue, bot messages in purple
+    /// - Validation results with pass/fail styling
+    /// - Box shadows and rounded corners for modern look
+    /// 
+    /// Safe to share: Sensitive data is redacted and HTML-escaped
     private func formatAsHTML(_ report: TestReport) -> String {
         let passRate = Double(report.passedScenarios) / Double(report.totalScenarios) * 100
         let statusColor = passRate >= 80 ? "green" : passRate >= 60 ? "orange" : "red"
@@ -204,6 +279,21 @@ class ReportGenerator {
         return html
     }
     
+    /// Formats report as Markdown
+    /// 
+    /// - Parameter report: Report to format
+    /// - Returns: Markdown-formatted string
+    /// 
+    /// Markdown features:
+    /// - Summary table with metrics
+    /// - Scenario sections with headers
+    /// - Emoji indicators (✅ for pass, ❌ for fail)
+    /// - Conversation history with bold sender labels
+    /// - Code blocks for errors
+    /// - Horizontal rules between scenarios
+    /// 
+    /// Great for: GitHub, documentation, README files
+    /// Safe to share: Sensitive data is redacted
     private func formatAsMarkdown(_ report: TestReport) -> String {
         let passRate = Double(report.passedScenarios) / Double(report.totalScenarios) * 100
         
@@ -270,6 +360,11 @@ class ReportGenerator {
     
     // MARK: - Helper Methods
     
+    /// Formats a date for display in reports
+    /// Uses medium date style and medium time style
+    /// 
+    /// - Parameter date: Date to format
+    /// - Returns: Formatted string like "Jan 15, 2024, 2:30:45 PM"
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -277,12 +372,26 @@ class ReportGenerator {
         return formatter.string(from: date)
     }
     
+    /// Formats a time for display (no date)
+    /// Uses medium time style
+    /// 
+    /// - Parameter date: Date to extract time from
+    /// - Returns: Formatted string like "2:30:45 PM"
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
         return formatter.string(from: date)
     }
     
+    /// Formats a duration in seconds to human-readable string
+    /// 
+    /// - Parameter duration: Duration in seconds
+    /// - Returns: Formatted string with appropriate units
+    /// 
+    /// Format examples:
+    /// - < 60s: "5.2s"
+    /// - < 1h: "3m 45s"
+    /// - ≥ 1h: "2h 15m"
     private func formatDuration(_ duration: Double) -> String {
         if duration < 60 {
             return String(format: "%.1fs", duration)
@@ -297,6 +406,18 @@ class ReportGenerator {
         }
     }
     
+    /// Escapes special HTML characters to prevent injection
+    /// Essential for safely displaying user-generated content in HTML
+    /// 
+    /// - Parameter string: String to escape
+    /// - Returns: HTML-safe string
+    /// 
+    /// Escapes:
+    /// - & → &amp;
+    /// - < → &lt;
+    /// - > → &gt;
+    /// - " → &quot;
+    /// - ' → &#x27;
     private func escapeHTML(_ string: String) -> String {
         return string
             .replacingOccurrences(of: "&", with: "&amp;")
@@ -306,6 +427,18 @@ class ReportGenerator {
             .replacingOccurrences(of: "'", with: "&#x27;")
     }
     
+    /// Redacts potentially sensitive data from text
+    /// Replaces long alphanumeric strings that might be API keys or tokens
+    /// 
+    /// - Parameter text: Text to redact
+    /// - Returns: Text with sensitive data replaced with "***REDACTED***"
+    /// 
+    /// Pattern: Replaces any alphanumeric string (including _ and -) that's 20+ characters
+    /// This catches most API keys, tokens, and secrets while preserving normal text
+    /// 
+    /// Examples:
+    /// - "sk-1234567890abcdefghijklmnop" → "***REDACTED***"
+    /// - "Hello world" → "Hello world" (unchanged)
     private func redactSensitive(_ text: String) -> String {
         let pattern = "[A-Za-z0-9_\\-]{20,}"
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }

@@ -1,32 +1,109 @@
 import SwiftUI
 
+/// Editor view for creating and modifying test configurations
+/// This is a complex form with multiple sections for configuring all aspects of a test
+/// 
+/// Sections:
+/// - Bot Configuration: Target bot name, endpoint, protocol, provider
+/// - Authentication: Optional API key/token authentication
+/// - Scenarios: List of test scenarios with conversation steps
+/// - Validation: How to validate bot responses (pattern, semantic, etc.)
+/// - Timing: Delays, timeouts, and pacing settings
+/// 
+/// Can be used in two modes:
+/// 1. Create new config (initialConfig = nil)
+/// 2. Edit existing config (initialConfig provided)
+/// 
+/// Changes are saved via onSave callback or directly to appState
 struct TestConfigEditorView: View {
+    /// Optional existing configuration to edit
+    /// If nil, creates a new configuration
     let initialConfig: TestConfig?
+    
+    /// Optional callback when configuration is saved
+    /// If nil, saves directly to appState
     let onSave: ((TestConfig) -> Void)?
     
+    /// @Environment allows dismissing this sheet/window
     @Environment(\.dismiss) private var dismiss
+    
+    /// @EnvironmentObject provides access to global app state
+    /// Used to save configurations and access default settings
     @EnvironmentObject var appState: AppState
     
+    // MARK: - Bot Configuration State
+    
+    /// @State means this view owns and manages these values
+    /// Changes trigger view re-renders
+    /// Initialized from initialConfig if editing, otherwise defaults
+    
+    /// Name of the target bot being tested
     @State private var botName = ""
+    
+    /// HTTP/WebSocket endpoint URL for the target bot
     @State private var botEndpoint = ""
+    
+    /// Communication protocol (http, websocket, grpc)
     @State private var botProtocol: BotProtocol = .http
+    
+    /// Bot provider type (openai, anthropic, generic, etc.)
     @State private var botProvider: BotProvider = .generic
+    
+    // MARK: - Authentication State
+    
+    /// Whether authentication is enabled for this bot
     @State private var useAuthentication = false
+    
+    /// Type of authentication (bearer, apiKey, basic, oauth)
     @State private var authType: AuthType = .bearer
+    
+    /// API key or token for authentication
+    /// Stored securely via KeychainManager
     @State private var authCredentials = ""
     
+    // MARK: - Scenarios State
+    
+    /// Array of test scenarios to run
+    /// Each scenario has conversation steps and expected outcomes
     @State private var scenarios: [Scenario] = []
+    
+    /// Whether the scenario editor sheet is visible
     @State private var showingScenarioEditor = false
+    
+    /// Scenario currently being edited (nil if creating new)
     @State private var editingScenario: Scenario? = nil
     
+    // MARK: - Validation State
+    
+    /// Default validation type for responses (pattern, semantic, custom)
     @State private var validationType: ValidationType = .pattern
+    
+    /// Threshold for semantic similarity validation (0.0-1.0)
+    /// Only used when validationType is .semantic
     @State private var semanticThreshold: Double = 0.8
     
+    // MARK: - Timing State
+    
+    /// Whether to add realistic delays between messages
     @State private var enableDelays = true
+    
+    /// Base delay before sending each message (milliseconds)
     @State private var baseDelay = 1000
+    
+    /// Additional delay per character in message (milliseconds)
+    /// Simulates typing speed
     @State private var delayPerCharacter = 50
+    
+    /// Maximum time to wait for bot response (milliseconds)
     @State private var responseTimeout = 30000
     
+    /// Initializes the editor with optional existing configuration
+    /// If initialConfig provided, pre-fills all fields with existing values
+    /// Otherwise uses default values
+    /// 
+    /// - Parameters:
+    ///   - initialConfig: Optional existing configuration to edit
+    ///   - onSave: Optional callback when configuration is saved
     init(initialConfig: TestConfig? = nil, onSave: ((TestConfig) -> Void)? = nil) {
         self.initialConfig = initialConfig
         self.onSave = onSave
@@ -247,10 +324,22 @@ struct TestConfigEditorView: View {
         }
     }
     
+    /// Deletes scenarios at the specified indices
+    /// Called by SwiftUI's .onDelete modifier
+    /// 
+    /// - Parameter offsets: Indices of scenarios to delete
     private func deleteScenario(at offsets: IndexSet) {
         scenarios.remove(atOffsets: offsets)
     }
     
+    /// Builds a TestConfig from the current form state
+    /// Combines all sections (bot, auth, scenarios, validation, timing, reporting)
+    /// 
+    /// - Returns: Complete TestConfig ready to save
+    /// 
+    /// Authentication is only included if:
+    /// - useAuthentication is true
+    /// - authCredentials is not empty
     private func buildConfiguration() -> TestConfig {
         let authentication: AuthConfig? = useAuthentication && !authCredentials.isEmpty
             ? AuthConfig(type: authType, credentials: authCredentials)
@@ -291,17 +380,58 @@ struct TestConfigEditorView: View {
     }
 }
 
+/// Editor view for creating and modifying test scenarios
+/// A scenario is a sequence of conversation steps with expected outcomes
+/// 
+/// Components:
+/// - Scenario Details: Name and description
+/// - Conversation Steps: Messages to send and expected responses
+/// - Expected Outcomes: Overall validation criteria for the scenario
+/// 
+/// Each step has:
+/// - message: What to send to the bot
+/// - expectedResponse: Optional validation criteria for the response
+/// 
+/// Presented as a sheet from TestConfigEditorView
 struct ScenarioEditorView: View {
+    /// @Environment allows dismissing this sheet
     @Environment(\.dismiss) private var dismiss
+    
+    /// Optional existing scenario to edit (nil if creating new)
     let initialScenario: Scenario?
+    
+    /// Callback when scenario is saved
+    /// Called with the complete scenario
     let onSave: (Scenario) -> Void
     
+    // MARK: - Scenario State
+    
+    /// @State means this view owns these values
+    /// Initialized from initialScenario if editing, otherwise defaults
+    
+    /// Unique identifier for this scenario
+    /// Auto-generated if creating new
     @State private var scenarioId: String
+    
+    /// Human-readable name for this scenario
     @State private var scenarioName: String
+    
+    /// Optional description explaining what this scenario tests
     @State private var scenarioDescription: String
+    
+    /// Array of conversation steps (message + expected response)
     @State private var steps: [ConversationStep]
+    
+    /// Overall validation criteria for the entire scenario
     @State private var expectedOutcomes: [ValidationCriteria]
     
+    /// Initializes the scenario editor
+    /// If initialScenario provided, pre-fills all fields
+    /// Otherwise uses defaults (empty name, no steps)
+    /// 
+    /// - Parameters:
+    ///   - initialScenario: Optional existing scenario to edit
+    ///   - onSave: Callback when scenario is saved (required)
     init(initialScenario: Scenario? = nil, onSave: @escaping (Scenario) -> Void) {
         self.initialScenario = initialScenario
         self.onSave = onSave
@@ -387,6 +517,9 @@ struct ScenarioEditorView: View {
         }
     }
     
+    /// Adds a new conversation step with default values
+    /// Step has "Hello" message and pattern validation for greetings
+    /// User can edit after adding
     private func addStep() {
         let step = ConversationStep(
             message: "Hello",
@@ -399,10 +532,17 @@ struct ScenarioEditorView: View {
         steps.append(step)
     }
     
+    /// Deletes conversation steps at the specified indices
+    /// Called by SwiftUI's .onDelete modifier
+    /// 
+    /// - Parameter offsets: Indices of steps to delete
     private func deleteStep(at offsets: IndexSet) {
         steps.remove(atOffsets: offsets)
     }
     
+    /// Adds a new expected outcome with default values
+    /// Outcome checks for "helpful response" with pattern validation
+    /// User can edit after adding
     private func addOutcome() {
         let outcome = ValidationCriteria(
             type: .pattern,
@@ -413,10 +553,17 @@ struct ScenarioEditorView: View {
         expectedOutcomes.append(outcome)
     }
     
+    /// Deletes expected outcomes at the specified indices
+    /// Called by SwiftUI's .onDelete modifier
+    /// 
+    /// - Parameter offsets: Indices of outcomes to delete
     private func deleteOutcome(at offsets: IndexSet) {
         expectedOutcomes.remove(atOffsets: offsets)
     }
     
+    /// Builds a Scenario from current form state and calls onSave
+    /// Uses existing scenarioId if editing, otherwise creates new one
+    /// Description is optional (nil if empty)
     private func saveScenario() {
         let scenario = Scenario(
             id: scenarioId,
@@ -430,14 +577,42 @@ struct ScenarioEditorView: View {
     }
 }
 
+/// Editor view for creating log analysis configurations
+/// Simpler than TestConfigEditorView - just configures what logs to analyze
+/// 
+/// Sections:
+/// - Log Source: File path and format (JSON, CSV, text, auto)
+/// - Analysis Options: What analysis to perform (metrics, patterns, context)
+/// 
+/// Always creates new configuration (no editing mode)
+/// Saves directly to appState
 struct AnalysisConfigEditorView: View {
+    /// @Environment allows dismissing this sheet
     @Environment(\.dismiss) private var dismiss
+    
+    /// @EnvironmentObject provides access to global app state
+    /// Used to save configuration and get default output path
     @EnvironmentObject var appState: AppState
     
+    // MARK: - Analysis Configuration State
+    
+    /// @State means this view owns these values
+    /// All default to sensible values for new configuration
+    
+    /// Path to the log file to analyze
     @State private var logPath = ""
+    
+    /// Format of the log file (json, csv, text, auto)
+    /// Auto-detection tries to determine format automatically
     @State private var logFormat: LogFormat = .auto
+    
+    /// Whether to calculate statistical metrics
     @State private var calculateMetrics = true
+    
+    /// Whether to detect common patterns (greetings, questions, errors)
     @State private var detectPatterns = true
+    
+    /// Whether to analyze context retention (bot memory)
     @State private var checkContextRetention = true
     
     var body: some View {
@@ -499,6 +674,9 @@ struct AnalysisConfigEditorView: View {
         }
     }
     
+    /// Opens a file picker to select a log file
+    /// Filters to JSON, CSV, and text files
+    /// Updates logPath with selected file path
     private func selectLogFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json, .commaSeparatedText, .plainText]
@@ -511,6 +689,9 @@ struct AnalysisConfigEditorView: View {
         }
     }
     
+    /// Creates an AnalysisConfig from current form state
+    /// Saves directly to appState.addAnalysisConfig()
+    /// Uses appState.defaultOutputPath for report output
     private func createConfiguration() {
         let config = AnalysisConfig(
             logSource: LogSource(path: logPath, format: logFormat),
@@ -533,9 +714,26 @@ struct AnalysisConfigEditorView: View {
     }
 }
 
+/// Detail view showing a test configuration's settings
+/// Read-only display with option to edit
+/// 
+/// Shows:
+/// - Bot name and endpoint
+/// - Protocol and provider
+/// - Number of scenarios
+/// - Validation type
+/// - List of all scenarios with details
+/// 
+/// Has "Edit" button that opens TestConfigEditorView sheet
 struct TestConfigDetailView: View {
+    /// The configuration to display
     let config: TestConfig
+    
+    /// @EnvironmentObject provides access to global app state
+    /// Used to update configuration when edited
     @EnvironmentObject var appState: AppState
+    
+    /// @State tracks whether edit sheet is visible
     @State private var showingEditSheet = false
     
     var body: some View {
@@ -600,6 +798,10 @@ struct TestConfigDetailView: View {
     }
 }
 
+/// Small card displaying a label and value
+/// Used in TestConfigDetailView to show configuration properties
+/// 
+/// Example: "Protocol" / "HTTP"
 struct InfoCard: View {
     let title: String
     let value: String
@@ -621,6 +823,9 @@ struct InfoCard: View {
     }
 }
 
+/// Card displaying a scenario's summary
+/// Shows name, description, step count, and outcome count
+/// Used in TestConfigDetailView to list all scenarios
 struct ScenarioCard: View {
     let scenario: Scenario
     
@@ -657,6 +862,15 @@ struct ScenarioCard: View {
     }
 }
 
+/// Detail view showing test results
+/// Displays summary metrics and individual scenario results
+/// 
+/// Shows:
+/// - Test run ID and start time
+/// - Summary: Total/Passed/Failed counts
+/// - Individual scenario results with pass/fail status
+/// - Duration for each scenario
+/// - Error messages if any
 struct TestResultDetailView: View {
     let result: TestResults
     
@@ -705,6 +919,11 @@ struct TestResultDetailView: View {
 #endif
     }
     
+    /// Formats date for display
+    /// Shows medium date style and short time style
+    /// 
+    /// - Parameter date: Date to format
+    /// - Returns: Formatted string like "Jan 15, 2024 at 2:30 PM"
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -713,6 +932,9 @@ struct TestResultDetailView: View {
     }
 }
 
+/// Card displaying a single scenario result
+/// Shows pass/fail status, scenario name, duration, and errors
+/// Used in TestResultDetailView to list all scenario results
 struct ScenarioResultCard: View {
     let result: ScenarioResult
     
@@ -751,6 +973,11 @@ struct ScenarioResultCard: View {
         .cornerRadius(8)
     }
     
+    /// Formats duration for display
+    /// Shows milliseconds if < 1 second, otherwise seconds
+    /// 
+    /// - Parameter duration: Duration in seconds
+    /// - Returns: Formatted string like "500ms" or "2.5s"
     private func formatDuration(_ duration: Double) -> String {
         if duration < 1 {
             return String(format: "%.0fms", duration * 1000)
@@ -760,6 +987,8 @@ struct ScenarioResultCard: View {
     }
 }
 
+/// SwiftUI preview for TestConfigEditorView
+/// Shows the editor in create mode with empty AppState
 #Preview {
     TestConfigEditorView()
         .environmentObject(AppState())
