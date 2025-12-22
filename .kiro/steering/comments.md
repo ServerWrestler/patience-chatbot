@@ -2,7 +2,7 @@
 
 ## Purpose
 
-All code in the Patience project must include comprehensive comments to help new Swift programmers understand the codebase. Comments should explain **what** the code does and **why**, not just **how**.
+All code in the Patience project must include clear, well-written comments. Comments should explain **what** the code does and **why**, not just **how**. Aim for clarity without being overly verbose.
 
 ## Requirements
 
@@ -264,8 +264,8 @@ class TestExecutor {
 
 ## Benefits
 
-- Helps new Swift programmers learn the codebase
-- Makes code review easier
+- Makes code easier to understand and maintain
+- Facilitates code review
 - Reduces onboarding time for new contributors
 - Serves as inline documentation
 - Explains design decisions for future maintainers

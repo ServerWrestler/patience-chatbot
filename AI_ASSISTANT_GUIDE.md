@@ -41,7 +41,7 @@ Copy and paste this section when starting a new conversation with an AI assistan
 - Mark UI code with @MainActor
 - Use @Published for state that triggers UI updates
 - Never store API keys in configs (use Keychain)
-- **ALL code must have comprehensive comments** (see Code Documentation Standards below)
+- **ALL code must have clear, well-written comments** (see Code Documentation Standards below)
 
 ---
 
@@ -271,7 +271,7 @@ func addConfig(_ config: Config) {
 
 ## 📝 Code Documentation Standards
 
-**ALL code must include comprehensive comments for new Swift programmers:**
+**ALL code must include clear, well-written comments:**
 
 ### File-Level Comments
 - Start each file with a comment explaining its purpose
@@ -329,7 +329,7 @@ When asking AI to review code, request checks for:
 - [ ] Naming follows conventions
 - [ ] No force unwraps (use guard/if let)
 - [ ] Proper memory management (no retain cycles)
-- [ ] **Comprehensive comments for all code** (see Code Documentation Standards)
+- [ ] **Clear, well-written comments for all code** (see Code Documentation Standards)
 
 ## 🚀 Testing Prompts
 
@@ -401,6 +401,6 @@ If AI assistants can't help:
 
 ---
 
-**Last Updated**: December 13, 2025
+**Last Updated**: December 21, 2025
 **For**: Patience v1.0.1
 **Compatible With**: ChatGPT, Claude, GitHub Copilot, and other AI assistants

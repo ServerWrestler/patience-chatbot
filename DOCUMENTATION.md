@@ -483,6 +483,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Last Updated**: December 12, 2024  
+**Last Updated**: December 21, 2025  
 **Version**: 1.0.0  
 **Platform**: macOS 13.0+
