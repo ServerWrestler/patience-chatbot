@@ -426,11 +426,18 @@ struct AdversarialConfigEditorView: View {
                                 Text("No goals added yet.")
                                     .foregroundColor(.secondary)
                             } else {
-                                ForEach(goals, id: \.self) { goal in
-                                    Text(goal)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                ForEach(goals.indices, id: \.self) { index in
+                                    HStack(spacing: 8) {
+                                        TextField("Goal", text: $goals[index])
+                                            .textFieldStyle(.roundedBorder)
+                                        
+                                        Button("Remove") {
+                                            goals.remove(at: index)
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                    }
                                 }
-                                .onDelete(perform: deleteGoal)
                             }
                             HStack(spacing: 8) {
                                 TextField("Add goal", text: $newGoal)

@@ -137,7 +137,7 @@ Share these with AI assistants for context:
 - `README.md` - Project overview and features
 - `DOCUMENTATION.md` - Comprehensive feature documentation
 - `CHANGELOG.md` - Version history
-- `IMPLEMENTATION_STATUS.md` - Current implementation status
+- `SECURITY.md` - Security policies and vulnerability reporting
 
 ## 🔧 Development Patterns
 
@@ -329,7 +329,7 @@ When asking AI to review code, request checks for:
 - [ ] Naming follows conventions
 - [ ] No force unwraps (use guard/if let)
 - [ ] Proper memory management (no retain cycles)
-- [ ] **Clear, well-written comments for all code** (see Code Documentation Standards)
+- [ ] Clear, well-written comments for all code (see Code Documentation Standards)
 
 ## 🚀 Testing Prompts
 
@@ -399,8 +399,9 @@ If AI assistants can't help:
 2. Look at similar implementations in the codebase
 3. Open an issue on GitHub with specific questions
 
----
+## Documentation Guidelines
 
-**Last Updated**: December 21, 2025
-**For**: Patience v1.0.1
-**Compatible With**: ChatGPT, Claude, GitHub Copilot, and other AI assistants
+- Do not add "Last Updated" dates to documentation files
+- Git tracks all changes and dates automatically
+- Focus on content quality over manual date tracking
+

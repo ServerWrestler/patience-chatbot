@@ -12,6 +12,8 @@ struct PatienceApp: App {
     /// AppState contains all test configs, results, and settings
     @StateObject private var appState = AppState()
     
+    @Environment(\.openWindow) private var openWindow
+    
     /// Defines the app's window structure and content
     /// This is required by the App protocol
     var body: some Scene {
@@ -41,13 +43,24 @@ struct PatienceApp: App {
         // Allows this window to be opened via URL scheme
         .handlesExternalEvents(matching: Set(arrayLiteral: "help"))
         
+        Window("About Patience", id: "about") {
+            AboutSettingsView()
+                .environmentObject(appState)
+                .frame(minWidth: 500, minHeight: 400)
+        }
+        .defaultSize(width: 500, height: 400)
+        
         // Customizes the app's menu commands
         .commands {
             // Replaces the default Help menu items
             CommandGroup(replacing: .help) {
                 Button("Patience Help") {
-                    // Sends action to show help window when clicked
-                    NSApp.sendAction(#selector(AppCommands.showHelpWindow), to: nil, from: nil)
+                    AppCommands.showHelpWindow()
+                }
+            }
+            CommandGroup(replacing: .appInfo) {
+                Button("About Patience") {
+                    openWindow(id: "about")
                 }
             }
         }
@@ -57,130 +70,45 @@ struct PatienceApp: App {
 /// Helper class for handling app-wide commands
 /// Inherits from NSObject to work with Objective-C runtime (required for @objc)
 class AppCommands: NSObject {
-    /// Shows the help window when called
+    /// GitHub repository URL for documentation
+    /// Update this if the repository location changes
+    static let repositoryURL = "https://github.com/ServerWrestler/patience-chatbot/blob/main/DOCUMENTATION.md"
+    
+    /// Opens the GitHub documentation in the default browser
     /// @objc makes this method callable from Objective-C/AppKit
     @objc static func showHelpWindow() {
-        // Posts a notification that the HelpView listens for
-        // This is how we communicate between menu and window
-        NotificationCenter.default.post(name: Notification.Name("ShowHelpWindow"), object: nil)
+        // Open the GitHub repository documentation in the default browser
+        if let url = URL(string: repositoryURL) {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 
-/// Help window view that displays user documentation
-/// Shows quick start guide, features, and documentation links
+/// Placeholder HelpView - Help now opens external GitHub documentation
+/// This view is kept for compatibility but the Help menu opens the browser instead
 struct HelpView: View {
-    /// Reference to the actual NSWindow for this view
-    /// Used to bring window to front when menu item is clicked
-    @State private var window: NSWindow? = nil
-    
-    /// Builds the help window's user interface
     var body: some View {
-        // Vertical stack with left alignment and 20pt spacing
-        VStack(alignment: .leading, spacing: 20) {
-            // Main title
-            Text("Patience Help")
+        VStack(spacing: 20) {
+            Image(systemName: "book.circle")
+                .font(.system(size: 60))
+                .foregroundColor(.accentColor)
+            
+            Text("Documentation")
                 .font(.largeTitle)
-                .padding(.bottom)
             
-            // Welcome message
-            Text("Welcome to Patience!")
+            Text("Help documentation is available on GitHub.")
                 .font(.body)
+                .foregroundColor(.secondary)
             
-            // Horizontal line separator
-            Divider()
-                .padding(.vertical)
-            
-            // Quick Start section
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Quick Start")
-                    .font(.headline)
-                
-                // Step-by-step instructions
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top) {
-                        Text("1.")
-                            .fontWeight(.semibold)
-                        Text("Create a test configuration in the Testing tab")
-                    }
-                    
-                    HStack(alignment: .top) {
-                        Text("2.")
-                            .fontWeight(.semibold)
-                        Text("Define scenarios and validation rules")
-                    }
-                    
-                    HStack(alignment: .top) {
-                        Text("3.")
-                            .fontWeight(.semibold)
-                        Text("Run tests and view results")
-                    }
-                    
-                    HStack(alignment: .top) {
-                        Text("4.")
-                            .fontWeight(.semibold)
-                        Text("Generate reports for analysis")
-                    }
-                }
-                .font(.body)
-            }
-            
-            Divider()
-                .padding(.vertical)
-            
-            // Features section
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Features")
-                    .font(.headline)
-                
-                // List of main features with SF Symbols icons
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Live Testing - Test bots with predefined scenarios", systemImage: "play.circle")
-                    Label("Log Analysis - Analyze conversation logs", systemImage: "chart.bar")
-                    Label("Adversarial Testing - AI-powered testing", systemImage: "shield")
-                    Label("Reports - Export results in multiple formats", systemImage: "doc.text")
-                }
-                .font(.body)
-            }
-            
-            Divider()
-                .padding(.vertical)
-            
-            // Documentation section
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Documentation")
-                    .font(.headline)
-                
-                Text("For detailed documentation, see the README.md and DOCUMENTATION.md files included with this application.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-            }
-            
-            // Pushes content to top, fills remaining space
-            Spacer()
-        }
-        .padding()
-        // Sets minimum window size
-        .frame(minWidth: 500, minHeight: 400)
-        // Called when view first appears on screen
-        .onAppear {
-            // Run on main thread (UI updates must be on main thread)
-            DispatchQueue.main.async {
-                // Find and store reference to this window
-                if window == nil {
-                    window = NSApp.windows.first(where: { $0.contentView?.subviews.contains(where: { view in
-                        (view as? NSHostingView<HelpView>) != nil
-                    }) ?? false})
+            Button("Open Documentation") {
+                if let url = URL(string: AppCommands.repositoryURL) {
+                    NSWorkspace.shared.open(url)
                 }
             }
+            .buttonStyle(.borderedProminent)
         }
-        // Listen for "ShowHelpWindow" notification from menu
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowHelpWindow"))) { _ in
-            // When notification received, bring window to front
-            if let window = window {
-                window.makeKeyAndOrderFront(nil)
-                // Activate app (brings to foreground)
-                NSApp.activate(ignoringOtherApps: true)
-            }
-        }
+        .padding(40)
+        .frame(minWidth: 400, minHeight: 300)
     }
 }
+

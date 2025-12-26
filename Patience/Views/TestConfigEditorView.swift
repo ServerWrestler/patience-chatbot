@@ -251,6 +251,11 @@ struct TestConfigEditorView: View {
                     }
 
                     GroupBox("Validation") {
+                        Text("Set the default validation type used when scenario steps don't specify their own validation type.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 8)
+                        
                         VStack(alignment: .leading, spacing: 12) {
                             LabeledContent("Default Type") {
                                 Picker("Default Type", selection: $validationType) {
@@ -321,6 +326,7 @@ struct TestConfigEditorView: View {
                 }
                 editingScenario = nil
             }
+            .frame(minWidth: 700, minHeight: 600)
         }
     }
     
@@ -454,18 +460,78 @@ struct ScenarioEditorView: View {
                     }
                     
                     Section("Conversation Steps") {
-                        ForEach(steps) { step in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Message: \(step.message)")
-                                    .font(.body)
+                        Text("Define the step-by-step conversation flow. Each step sends a message and can validate the bot's immediate response to that specific message.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 8)
+                        
+                        ForEach(steps.indices, id: \.self) { index in
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("Message", text: $steps[index].message)
+                                    .textFieldStyle(.roundedBorder)
                                 
-                                if let expected = step.expectedResponse {
-                                    Text("Expected: \(expected.expected)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                if steps[index].expectedResponse != nil {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Expected Response:")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                        
+                                        TextField("Expected response", text: Binding(
+                                            get: { steps[index].expectedResponse?.expected ?? "" },
+                                            set: { newValue in
+                                                if steps[index].expectedResponse != nil {
+                                                    steps[index].expectedResponse?.expected = newValue
+                                                }
+                                            }
+                                        ))
+                                        .textFieldStyle(.roundedBorder)
+                                        
+                                        HStack {
+                                            Text("Type:")
+                                                .font(.caption)
+                                            
+                                            Picker("Validation Type", selection: Binding(
+                                                get: { steps[index].expectedResponse?.validationType ?? .pattern },
+                                                set: { newValue in
+                                                    if steps[index].expectedResponse != nil {
+                                                        steps[index].expectedResponse?.validationType = newValue
+                                                    }
+                                                }
+                                            )) {
+                                                ForEach(ValidationType.allCases, id: \.self) { type in
+                                                    Text(type.rawValue.capitalized).tag(type)
+                                                }
+                                            }
+                                            .pickerStyle(.menu)
+                                            .frame(maxWidth: 150)
+                                        }
+                                    }
+                                    .padding(.leading, 8)
+                                    .background(Color(.controlBackgroundColor))
+                                    .cornerRadius(4)
+                                }
+                                
+                                HStack {
+                                    if steps[index].expectedResponse == nil {
+                                        Button("Add Expected Response") {
+                                            steps[index].expectedResponse = ResponseCriteria(
+                                                validationType: .pattern,
+                                                expected: "",
+                                                threshold: 0.8
+                                            )
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                    } else {
+                                        Button("Remove Expected Response") {
+                                            steps[index].expectedResponse = nil
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                    }
                                 }
                             }
-                            .padding(.vertical, 2)
+                            .padding(.vertical, 4)
                         }
                         .onDelete(perform: deleteStep)
                         
@@ -475,15 +541,40 @@ struct ScenarioEditorView: View {
                     }
                     
                     Section("Expected Outcomes") {
-                        ForEach(expectedOutcomes) { outcome in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(outcome.expected)
-                                    .font(.body)
+                        Text("Define overall goals for the entire conversation. These validate the conversation as a whole after all steps are complete.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 8)
+                        
+                        ForEach(expectedOutcomes.indices, id: \.self) { index in
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("Expected outcome", text: $expectedOutcomes[index].expected)
+                                    .textFieldStyle(.roundedBorder)
                                 
-                                Text("Type: \(outcome.type.rawValue)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                HStack {
+                                    Text("Type:")
+                                        .font(.caption)
+                                    
+                                    Picker("Validation Type", selection: $expectedOutcomes[index].type) {
+                                        ForEach(ValidationType.allCases, id: \.self) { type in
+                                            Text(type.rawValue.capitalized).tag(type)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .frame(maxWidth: 150)
+                                    
+                                    Spacer()
+                                }
+                                
+                                TextField("Description (optional)", text: Binding(
+                                    get: { expectedOutcomes[index].description ?? "" },
+                                    set: { newValue in
+                                        expectedOutcomes[index].description = newValue.isEmpty ? nil : newValue
+                                    }
+                                ))
+                                .textFieldStyle(.roundedBorder)
                             }
+                            .padding(.vertical, 4)
                         }
                         .onDelete(perform: deleteOutcome)
                         
@@ -518,16 +609,13 @@ struct ScenarioEditorView: View {
     }
     
     /// Adds a new conversation step with default values
-    /// Step has "Hello" message and pattern validation for greetings
-    /// User can edit after adding
+    /// Step has empty message that user must fill in
+    /// User can optionally add expected response validation
     private func addStep() {
         let step = ConversationStep(
-            message: "Hello",
-            expectedResponse: ResponseCriteria(
-                validationType: .pattern,
-                expected: "hello|hi|greetings",
-                threshold: 0.8
-            )
+            message: "",
+            expectedResponse: nil,
+            delay: nil
         )
         steps.append(step)
     }
@@ -541,14 +629,13 @@ struct ScenarioEditorView: View {
     }
     
     /// Adds a new expected outcome with default values
-    /// Outcome checks for "helpful response" with pattern validation
-    /// User can edit after adding
+    /// Outcome has empty expected text that user must fill in
     private func addOutcome() {
         let outcome = ValidationCriteria(
             type: .pattern,
-            expected: "helpful response",
+            expected: "",
             threshold: 0.7,
-            description: "Bot should provide helpful responses"
+            description: nil
         )
         expectedOutcomes.append(outcome)
     }

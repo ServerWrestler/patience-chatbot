@@ -118,7 +118,3 @@ Patience uses macOS App Sandbox with these entitlements:
 - **Response Time**: 48 hours for initial response
 - **GitHub Issues**: For non-security bugs and feature requests
 
----
-
-**Last Updated**: December 21, 2025
-**Version**: 1.0

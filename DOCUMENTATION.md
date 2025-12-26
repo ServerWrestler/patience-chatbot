@@ -11,6 +11,14 @@ Comprehensive documentation for the Patience macOS application - a native Swift/
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
 - **[SECURITY.md](SECURITY.md)** - Security policies and vulnerability reporting
 
+### Feature Guides
+
+Detailed guides for each major feature:
+
+- **[Live Testing Guide](docs/LIVE_TESTING_GUIDE.md)** - Test your chatbot with predefined scenarios
+- **[Log Analysis Guide](docs/LOG_ANALYSIS_GUIDE.md)** - Analyze historical conversation logs
+- **[Adversarial Testing Guide](docs/ADVERSARIAL_TESTING_GUIDE.md)** - AI-powered automated testing
+
 ---
 
 ## 🎯 Features
@@ -481,8 +489,3 @@ Enable detailed logging in Settings:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-**Last Updated**: December 21, 2025  
-**Version**: 1.0.0  
-**Platform**: macOS 13.0+

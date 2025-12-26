@@ -1,6 +1,10 @@
 import SwiftUI
 
+/// Settings window with multiple tabs for different configuration areas
+/// Provides user preferences for testing, reporting, and application behavior
 struct SettingsView: View {
+    /// @EnvironmentObject provides access to global app state
+    /// Used for saving user preferences and default settings
     @EnvironmentObject var appState: AppState
     
     var body: some View {
@@ -18,6 +22,11 @@ struct SettingsView: View {
             ReportingSettingsView()
                 .tabItem {
                     Label("Reporting", systemImage: "doc.text")
+                }
+            
+            AboutSettingsView()
+                .tabItem {
+                    Label("About", systemImage: "info.circle")
                 }
         }
         .frame(width: 500, height: 400)
@@ -109,6 +118,49 @@ struct ReportingSettingsView: View {
                 
                 Toggle("Include timestamps", isOn: $includeTimestamps)
                 Toggle("Compress large reports", isOn: $compressReports)
+            }
+        }
+        .padding()
+    }
+}
+
+/// About section showing application information
+/// Features the project mascot (devil emoji) and basic app details
+struct AboutSettingsView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image("AboutMascot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+                .accessibilityHidden(true)
+            
+            Text("Patience")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            
+            Text("Chatbot Testing Framework")
+                .font(.title2)
+                .foregroundColor(.secondary)
+            
+            VStack(spacing: 8) {
+                Text("A comprehensive testing framework for chatbots")
+                Text("Built with Swift and SwiftUI for macOS")
+            }
+            .font(.body)
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.center)
+            
+            Spacer()
+            
+            VStack(spacing: 4) {
+                Text("Pre-release Development Version")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("No version number assigned yet")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding()

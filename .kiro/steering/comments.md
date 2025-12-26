@@ -275,3 +275,9 @@ class TestExecutor {
 - [Swift Documentation Guidelines](https://swift.org/documentation/api-design-guidelines/)
 - [Apple's Code Documentation](https://developer.apple.com/library/archive/documentation/Xcode/Reference/xcode_markup_formatting_ref/)
 - See `AI_ASSISTANT_GUIDE.md` for more examples
+
+## Documentation Guidelines
+
+- Do not add "Last Updated" dates to documentation files
+- Git tracks all changes and dates automatically
+- Focus on content quality over manual date tracking

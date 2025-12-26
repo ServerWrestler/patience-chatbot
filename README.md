@@ -315,4 +315,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Uses macOS Keychain Services for secure storage
 - Supports Ollama, OpenAI, and Anthropic AI providers
 
----
