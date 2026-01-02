@@ -1,19 +1,41 @@
 # Log Analysis Guide
 
-This guide explains how to use Patience's Log Analysis feature to analyze historical conversation logs from your chatbot.
+> **⚠️ IMPORTANT NOTICE**
+> 
+> This guide documents a **planned feature** that is not yet fully implemented in Patience. Currently, only basic context analysis is available. Full log analysis capabilities including multi-format import, pattern detection, and comprehensive metrics are planned for a future release.
+> 
+> This documentation serves as a specification for the planned implementation.
+
+---
+
+This guide explains how to use Patience's planned Log Analysis feature to analyze historical conversation logs from your chatbot.
 
 ## Overview
 
-Log Analysis allows you to import conversation logs from your production chatbot and analyze them for patterns, issues, and quality metrics. Unlike Live Testing (which tests in real-time), Log Analysis works with historical data you've already collected.
+Log Analysis (when implemented) will allow you to import conversation logs from your production chatbot and analyze them for patterns, issues, and quality metrics. Unlike Live Testing (which tests in real-time), Log Analysis will work with historical data you've already collected.
 
-## Getting Started
+## Current Status
+
+**Currently Available:**
+- Basic context retention analysis for multi-turn conversations
+- Simple conversation quality scoring via `AnalysisEngine.analyzeContextRetention()`
+
+**Planned for Future Release:**
+- Multi-format log import (JSON, CSV, text)
+- Comprehensive pattern detection
+- Statistical metrics calculation
+- Advanced filtering and reporting
+
+## Getting Started *(Planned Feature)*
+
+> **Note:** The following steps describe the planned user interface. Currently, only basic context analysis is available through the Analysis tab.
 
 ### Step 1: Navigate to Analysis
 
 1. Open Patience
 2. Click the **"Analysis"** tab in the sidebar
 
-### Step 2: Prepare Your Log File
+### Step 2: Prepare Your Log File *(Planned)*
 
 Patience supports three log formats. Choose the one that matches your data:
 
@@ -538,6 +560,10 @@ Export HTML report for stakeholder presentation.
 
 ## Next Steps
 
-- **[Live Testing Guide](LIVE_TESTING_GUIDE.md)**: Test your bot in real-time
-- **[Adversarial Testing Guide](ADVERSARIAL_TESTING_GUIDE.md)**: AI-powered edge case testing
+- **[Live Testing Guide](LIVE_TESTING_GUIDE.md)**: Test your bot in real-time ✅
+- **[Adversarial Testing Guide](ADVERSARIAL_TESTING_GUIDE.md)**: AI-powered edge case testing ✅
 - **[DOCUMENTATION.md](../DOCUMENTATION.md)**: Complete technical reference
+
+---
+
+> **Development Note:** This guide documents planned functionality. The current Patience release includes basic context analysis only. Full log analysis features including multi-format import, pattern detection, and comprehensive metrics are planned for future implementation. Check the project roadmap for updates on development progress.

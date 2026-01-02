@@ -2,10 +2,6 @@
 
 A comprehensive native macOS application for chatbot testing with three powerful modes: live scenarios, log analysis, and AI-powered adversarial testing.
 
-[![macOS](https://img.shields.io/badge/macOS-13.0+-blue.svg)](https://www.apple.com/macos/)
-[![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
 ## Features
 
 ### 🚀 Live Testing
@@ -15,14 +11,14 @@ A comprehensive native macOS application for chatbot testing with three powerful
 - **Realistic Timing**: Configurable delays to simulate human typing patterns
 - **Real-time Monitoring**: Live progress tracking and immediate feedback
 - **Provider Support**: Generic HTTP endpoints, Ollama local models, and cloud APIs
+- **Configuration Sharing**: Export/import configurations for team collaboration
 
-### 📊 Log Analysis
-- **Multi-format Import**: Drag-and-drop support for JSON, CSV, and text log files
-- **Automatic Detection**: Smart format detection and parsing
-- **Pattern Recognition**: Identify conversation patterns, failures, and success indicators
-- **Metrics Calculation**: Response rates, message statistics, and timing analysis
-- **Context Analysis**: Multi-turn conversation quality scoring
-- **Advanced Filtering**: Date ranges, message counts, and content-based filters
+### 📊 Log Analysis *(Coming Soon)*
+- **Context Analysis**: Multi-turn conversation quality scoring *(Basic implementation available)*
+- **Multi-format Import**: Drag-and-drop support for JSON, CSV, and text log files *(Planned)*
+- **Pattern Recognition**: Identify conversation patterns and success indicators *(Planned)*
+- **Metrics Calculation**: Response rates, message statistics, and timing analysis *(Planned)*
+- **Advanced Filtering**: Date ranges, message counts, and content-based filters *(Planned)*
 
 ### 🤖 Adversarial Testing
 - **AI-Powered Testing**: Let AI models test your chatbot through realistic conversations
@@ -58,8 +54,6 @@ A comprehensive native macOS application for chatbot testing with three powerful
 
 ## Installation
 
-⚠️ This project is under active development with weekly updates, aiming for a New Year’s release. 🧨
-
 ### Option 1: Download Release (Recommended)
 1. Download the latest release from the [releases page](https://github.com/ServerWrestler/patience-chatbot/releases)
 2. Drag `Patience.app` to your Applications folder
@@ -84,30 +78,21 @@ A comprehensive native macOS application for chatbot testing with three powerful
    xcodebuild -project Patience.xcodeproj -scheme Patience build
    ```
 
-3. **First Launch**
-   
-   On first launch, the application will:
-   - Create sample test configurations
-   - Set up default output paths at `~/Documents/Patience Reports`
-   - Initialize secure keychain storage for API keys
-
 ## Quick Start
 
-### 1. Live Testing
+### 1. Live Testing ✅
 1. Click **"New Configuration"** in the Testing tab
 2. Enter your bot's endpoint URL (e.g., `http://localhost:3000/chat`)
 3. Add conversation scenarios with expected responses
 4. Configure validation rules and timing
 5. Click **"Run Tests"** to execute
 
-### 2. Log Analysis
+### 2. Log Analysis *(Basic Features Only)*
 1. Switch to the **Analysis** tab
-2. Drag a log file onto the interface or click **"Import Log File"**
-3. Configure analysis options (metrics, patterns, context)
-4. View results in the interactive interface
-5. Export findings as reports
+2. *(Currently supports basic context analysis only)*
+3. *(Full log import and analysis features coming in future release)*
 
-### 3. Adversarial Testing
+### 3. Adversarial Testing ✅
 1. Go to the **Adversarial** tab
 2. Click **"New Configuration"**
 3. Set up your target bot endpoint
@@ -200,40 +185,6 @@ A comprehensive native macOS application for chatbot testing with three powerful
 }
 ```
 
-## Architecture
-
-### Project Structure
-
-```
-Patience/
-├── Models/              # Data structures and types
-│   ├── AppState.swift   # Application state management
-│   └── Types.swift      # Configuration and result types
-├── Core/                # Business logic
-│   ├── TestExecutor.swift              # Live test execution
-│   ├── AnalysisEngine.swift            # Log analysis
-│   ├── ReportGenerator.swift           # Report generation
-│   ├── AdversarialTestOrchestrator.swift  # AI testing
-│   └── KeychainManager.swift           # Secure key storage
-├── Views/               # SwiftUI interface
-│   ├── TestingView.swift
-│   ├── AnalysisView.swift
-│   ├── AdversarialView.swift
-│   ├── ReportsView.swift
-│   └── SettingsView.swift
-├── ContentView.swift    # Main app view
-└── PatienceApp.swift    # App entry point
-```
-
-### Technology Stack
-
-- **Language**: Swift 5.9+
-- **Framework**: SwiftUI for native macOS GUI
-- **Platform**: macOS 13.0+
-- **Security**: Keychain Services for API key storage
-- **Concurrency**: Swift async/await with Sendable types
-- **Networking**: URLSession for HTTP communication
-
 ## API Provider Setup
 
 ### Ollama (Local, Free)
@@ -253,36 +204,6 @@ Patience/
 2. Select "Anthropic" provider in Patience
 3. Enter API key (stored securely in Keychain)
 4. Choose model (claude-3-opus, claude-3-sonnet)
-
-## Error Handling
-
-Patience includes comprehensive error handling:
-
-- **User-Facing Alerts**: All errors display in native macOS alerts
-- **Keychain Feedback**: Clear notifications if API key storage fails
-- **Detailed Logging**: Optional verbose logging for debugging
-- **Graceful Failures**: Operations continue when possible, with clear explanations
-
-## Troubleshooting
-
-### Connection Issues
-- Verify bot endpoint is accessible
-- Check firewall settings
-- Ensure correct protocol (http/https)
-
-### Keychain Access Denied
-- Grant Patience access in System Settings → Privacy & Security
-- API keys will be requested again on next use
-
-### Analysis Fails
-- Verify log file format (JSON, CSV, or text)
-- Check file permissions
-- Ensure file is not corrupted
-
-### Adversarial Testing Errors
-- Verify AI provider is running (Ollama) or API key is valid
-- Check network connectivity
-- Review safety settings (cost limits, rate limits)
 
 ## Documentation
 
@@ -308,10 +229,3 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built with Swift and SwiftUI
-- Uses macOS Keychain Services for secure storage
-- Supports Ollama, OpenAI, and Anthropic AI providers
-

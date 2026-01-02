@@ -126,16 +126,25 @@ Uses AI to compare the meaning of the response to the expected text.
 
 **Best for**: Responses where the meaning matters more than exact wording
 
-**Example**:
-- Expected: "The weather is nice today"
-- Matches: "It's a beautiful day outside" (similar meaning)
-- Matches: "Today has great weather" (similar meaning)
-- Does NOT match: "I like pizza" (different meaning)
+**What to enter in the text field**: The expected meaning in plain English
+
+**Examples**:
+
+| What you enter | Bot response that matches | Bot response that doesn't match |
+|----------------|---------------------------|--------------------------------|
+| "The weather is nice today" | "It's a beautiful day outside" | "I like pizza" |
+| "I can help you with that" | "Sure, I'll assist you" | "I don't understand" |
+| "Your order is being processed" | "We're working on your order now" | "Order not found" |
+| "Thank you for contacting us" | "Thanks for reaching out!" | "What do you need?" |
+
+**How it works**: Patience uses Apple's NaturalLanguage framework to compare meanings, not exact words.
 
 **Threshold**: Set between 0.0 and 1.0
 - 0.8 = Requires 80% semantic similarity (recommended)
 - 0.9 = Very strict, nearly identical meaning required
 - 0.6 = Loose matching, general topic similarity
+
+**Note**: You don't need to provide any API keys or endpoints - semantic analysis is built into Patience.
 
 ### 4. Custom
 Uses custom validation logic you define.
@@ -362,6 +371,125 @@ Here's a complete example testing a customer support bot:
    - Type: Semantic
    - Expected: "helpful customer service interaction"
    - Threshold: 0.6
+
+---
+
+## Sharing and Managing Configurations
+
+### Exporting Configurations
+
+Patience provides several ways to export and share your test configurations:
+
+#### Export Single Configuration
+1. **Right-click** on any configuration in the list
+2. Select **"Export..."**
+3. Choose a location and filename
+4. The configuration is saved as a JSON file
+
+#### Export All Configurations
+1. Click the **"Export"** menu in the top toolbar
+2. Select **"Export All Configurations..."**
+3. Choose a location for the combined JSON file
+4. All configurations are saved in a single file
+
+#### Copy to Clipboard
+1. **Right-click** on any configuration
+2. Select **"Copy to Clipboard"**
+3. The configuration JSON is copied for easy sharing via chat/email
+
+### Importing Configurations
+
+#### Import from File
+1. Click the **"Import"** menu in the top toolbar
+2. Select **"Import Configuration..."**
+3. Choose a JSON file containing configurations
+4. Configurations are added to your existing list
+
+**Supported Import Formats:**
+- Single configuration JSON file
+- Multiple configurations in an array
+- Files exported from other Patience installations
+
+#### Import Behavior
+- **New IDs**: Imported configurations get new unique IDs to avoid conflicts
+- **Merge**: Imported configs are added to existing ones (doesn't replace)
+- **Validation**: Invalid configurations are rejected with error messages
+
+### Sharing with Team Members
+
+**Best Practices for Team Sharing:**
+
+1. **Version Control**: Store exported JSON files in your project repository
+   ```
+   tests/
+   ├── patience-configs/
+   │   ├── api-tests.json
+   │   ├── regression-tests.json
+   │   └── smoke-tests.json
+   ```
+
+2. **Documentation**: Include setup instructions in your README
+   ```markdown
+   ## Test Setup
+   1. Install Patience
+   2. Import configurations: `tests/patience-configs/api-tests.json`
+   3. Update bot endpoints for your environment
+   ```
+
+3. **Environment-Specific**: Export base configurations, team members update endpoints
+   - Development: `http://localhost:3000`
+   - Staging: `https://staging-api.example.com`
+   - Production: `https://api.example.com`
+
+### Configuration File Format
+
+Exported configurations use this JSON structure:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "targetBot": {
+    "name": "Customer Support Bot",
+    "protocol": "http",
+    "endpoint": "https://api.example.com/chat",
+    "provider": "generic"
+  },
+  "scenarios": [
+    {
+      "id": "greeting-test",
+      "name": "Greeting Test",
+      "steps": [
+        {
+          "message": "Hello",
+          "expectedResponse": {
+            "validationType": "pattern",
+            "expected": "hello|hi|greetings",
+            "threshold": 0.8
+          }
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "defaultType": "pattern",
+    "semanticSimilarityThreshold": 0.8
+  },
+  "timing": {
+    "enableDelays": true,
+    "baseDelay": 1000,
+    "delayPerCharacter": 50,
+    "responseTimeout": 30000
+  },
+  "reporting": {
+    "outputPath": "~/Documents/Patience Reports",
+    "formats": ["json", "html"],
+    "includeConversationHistory": true,
+    "verboseErrors": true
+  }
+}
+```
+
+**Security Note**: API keys and authentication tokens are never included in exported configurations for security reasons.
 
 ---
 

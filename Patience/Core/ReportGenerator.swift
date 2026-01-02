@@ -169,6 +169,7 @@ class ReportGenerator {
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
             <title>Patience Test Report</title>
             <style>
                 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 40px; }
@@ -187,6 +188,9 @@ class ReportGenerator {
                 .validation { margin-top: 10px; padding: 10px; border-radius: 4px; }
                 .validation.passed { background: #d4edda; color: #155724; }
                 .validation.failed { background: #f8d7da; color: #721c24; }
+                .status-icon { font-weight: bold; }
+                .status-pass { color: green; }
+                .status-fail { color: red; }
             </style>
         </head>
         <body>
@@ -219,7 +223,7 @@ class ReportGenerator {
         
         for result in report.scenarioResults {
             let statusClass = result.passed ? "passed" : "failed"
-            let statusIcon = result.passed ? "✅" : "❌"
+            let statusIcon = result.passed ? "<span class=\"status-icon status-pass\">PASS</span>" : "<span class=\"status-icon status-fail\">FAIL</span>"
             
             html += """
             <div class="scenario \(statusClass)">
@@ -246,7 +250,7 @@ class ReportGenerator {
             // Add validation results
             for validation in result.validationResults {
                 let validationClass = validation.passed ? "passed" : "failed"
-                let validationIcon = validation.passed ? "✅" : "❌"
+                let validationIcon = validation.passed ? "<span class=\"status-icon status-pass\">PASS</span>" : "<span class=\"status-icon status-fail\">FAIL</span>"
                 
                 html += """
                 <div class="validation \(validationClass)">
@@ -260,7 +264,7 @@ class ReportGenerator {
             if let error = result.error {
                 html += """
                 <div class="validation failed">
-                    ❌ Error: \(escapeHTML(error))
+                    <span class="status-icon status-fail">ERROR</span> \(escapeHTML(error))
                 </div>
                 """
             }

@@ -276,8 +276,22 @@ class CommunicationManager {
     /// - Returns: BotResponse with content and timing
     /// - Throws: TestError if URL invalid, HTTP error, or parsing fails
     private func sendHTTPMessage(_ message: String, to bot: BotConfig) async throws -> BotResponse {
+        // Determine the correct endpoint URL for the provider
+        let endpointURL: String
+        if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
+            // Ollama requires the /api/generate endpoint
+            if bot.endpoint.hasSuffix("/api/generate") {
+                endpointURL = bot.endpoint
+            } else {
+                endpointURL = bot.endpoint.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/api/generate"
+            }
+        } else {
+            // Generic bots use the endpoint as-is
+            endpointURL = bot.endpoint
+        }
+        
         // Validate endpoint URL
-        guard let url = URL(string: bot.endpoint) else {
+        guard let url = URL(string: endpointURL) else {
             throw TestError.invalidEndpoint
         }
         
@@ -307,8 +321,24 @@ class CommunicationManager {
             request.setValue(value, forHTTPHeaderField: key)
         }
         
-        // Create JSON request body
-        let requestBody = ["message": message]
+        // Create JSON request body based on provider type
+        let requestBody: [String: Any]
+        
+        // Check if this is an Ollama endpoint and format request accordingly
+        if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
+            // Ollama API format: requires model and prompt fields
+            // Use default model if not specified in config
+            let model = bot.model ?? "llama2"
+            requestBody = [
+                "model": model,
+                "prompt": message,
+                "stream": false
+            ]
+        } else {
+            // Generic chatbot format: simple message field
+            requestBody = ["message": message]
+        }
+        
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
         // Send request and measure response time
@@ -322,11 +352,21 @@ class CommunicationManager {
             throw TestError.httpError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0)
         }
         
-        // Parse JSON response
-        // Expects {"response": "bot message"} format
-        // Falls back to raw data if JSON parsing fails
+        // Parse JSON response based on provider type
+        // Ollama returns {"response": "text"} format
+        // Generic bots may return {"response": "text"} or other formats
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        let content = json?["response"] as? String ?? String(data: data, encoding: .utf8) ?? ""
+        
+        let content: String
+        if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
+            // Ollama response format: {"response": "bot message"}
+            content = json?["response"] as? String ?? String(data: data, encoding: .utf8) ?? ""
+        } else {
+            // Generic bot response: try "response" field first, then "message", then raw data
+            content = json?["response"] as? String ?? 
+                     json?["message"] as? String ?? 
+                     String(data: data, encoding: .utf8) ?? ""
+        }
         
         return BotResponse(
             content: content,

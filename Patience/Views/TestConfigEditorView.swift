@@ -49,6 +49,10 @@ struct TestConfigEditorView: View {
     /// Bot provider type (openai, anthropic, generic, etc.)
     @State private var botProvider: BotProvider = .generic
     
+    /// Model name for AI providers (ollama, openai, anthropic)
+    /// Only used when provider is not generic
+    @State private var botModel = ""
+    
     // MARK: - Authentication State
     
     /// Whether authentication is enabled for this bot
@@ -97,6 +101,20 @@ struct TestConfigEditorView: View {
     /// Maximum time to wait for bot response (milliseconds)
     @State private var responseTimeout = 30000
     
+    /// Computed property that provides placeholder text for model field based on provider
+    private var modelPlaceholder: String {
+        switch botProvider {
+        case .ollama:
+            return "e.g., llama2, mistral, codellama"
+        case .openai:
+            return "e.g., gpt-4, gpt-3.5-turbo"
+        case .anthropic:
+            return "e.g., claude-3-sonnet, claude-3-opus"
+        case .generic:
+            return "Model name"
+        }
+    }
+    
     /// Initializes the editor with optional existing configuration
     /// If initialConfig provided, pre-fills all fields with existing values
     /// Otherwise uses default values
@@ -112,6 +130,7 @@ struct TestConfigEditorView: View {
         self._botEndpoint = State(initialValue: initialConfig?.targetBot.endpoint ?? "")
         self._botProtocol = State(initialValue: initialConfig?.targetBot.botProtocol ?? .http)
         self._botProvider = State(initialValue: initialConfig?.targetBot.provider ?? .generic)
+        self._botModel = State(initialValue: initialConfig?.targetBot.model ?? "")
         self._useAuthentication = State(initialValue: initialConfig?.targetBot.authentication != nil)
         self._authType = State(initialValue: initialConfig?.targetBot.authentication?.type ?? .bearer)
         self._authCredentials = State(initialValue: initialConfig?.targetBot.authentication?.credentials ?? "")
@@ -137,7 +156,13 @@ struct TestConfigEditorView: View {
                     let config = buildConfiguration()
                     if let onSave = onSave {
                         onSave(config)
+                    } else if let existingConfig = initialConfig {
+                        // Update existing configuration
+                        var updatedConfig = config
+                        updatedConfig.id = existingConfig.id  // Preserve original ID
+                        appState.updateTestConfig(updatedConfig)
                     } else {
+                        // Create new configuration
                         appState.addTestConfig(config)
                     }
                     dismiss()
@@ -182,6 +207,15 @@ struct TestConfigEditorView: View {
                                 }
                                 .labelsHidden()
                                 .frame(maxWidth: 300, alignment: .leading)
+                            }
+                            
+                            // Show model field for AI providers (not generic)
+                            if botProvider != .generic {
+                                LabeledContent("Model") {
+                                    TextField(modelPlaceholder, text: $botModel)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(maxWidth: 400)
+                                }
                             }
                         }
                     }
@@ -351,7 +385,7 @@ struct TestConfigEditorView: View {
             ? AuthConfig(type: authType, credentials: authCredentials)
             : nil
         
-        let config = TestConfig(
+        var config = TestConfig(
             targetBot: BotConfig(
                 name: botName,
                 botProtocol: botProtocol,
@@ -359,7 +393,7 @@ struct TestConfigEditorView: View {
                 authentication: authentication,
                 headers: nil,
                 provider: botProvider,
-                model: nil
+                model: botProvider != .generic && !botModel.isEmpty ? botModel : nil
             ),
             scenarios: scenarios,
             validation: ValidationConfig(
@@ -381,6 +415,11 @@ struct TestConfigEditorView: View {
                 verboseErrors: true
             )
         )
+        
+        // Preserve original ID if editing existing configuration
+        if let existingConfig = initialConfig {
+            config.id = existingConfig.id
+        }
         
         return config
     }

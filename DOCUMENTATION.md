@@ -15,15 +15,26 @@ Comprehensive documentation for the Patience macOS application - a native Swift/
 
 Detailed guides for each major feature:
 
-- **[Live Testing Guide](docs/LIVE_TESTING_GUIDE.md)** - Test your chatbot with predefined scenarios
-- **[Log Analysis Guide](docs/LOG_ANALYSIS_GUIDE.md)** - Analyze historical conversation logs
-- **[Adversarial Testing Guide](docs/ADVERSARIAL_TESTING_GUIDE.md)** - AI-powered automated testing
+- **[Live Testing Guide](docs/LIVE_TESTING_GUIDE.md)** - Test your chatbot with predefined scenarios ✅
+- **[Log Analysis Guide](docs/LOG_ANALYSIS_GUIDE.md)** - *Planned feature documentation* ⚠️
+- **[Adversarial Testing Guide](docs/ADVERSARIAL_TESTING_GUIDE.md)** - AI-powered automated testing ✅
 
 ---
 
 ## 🎯 Features
 
-### 1. Live Testing
+### Current Implementation Status
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Live Testing** | ✅ **Fully Implemented** | Complete scenario-based testing with validation |
+| **Adversarial Testing** | ✅ **Fully Implemented** | AI-powered automated testing with multiple providers |
+| **Log Analysis** | ⚠️ **Basic Implementation** | Only context analysis available; full features planned |
+| **Reporting** | ✅ **Fully Implemented** | HTML, JSON, Markdown export for live and adversarial tests |
+
+---
+
+### 1. Live Testing ✅
 
 **Purpose**: Test your chatbot in real-time with predefined conversation scenarios.
 
@@ -59,19 +70,24 @@ struct TestConfig {
 
 ---
 
-### 2. Log Analysis
+### 2. Log Analysis *(Coming Soon)*
 
 **Purpose**: Analyze historical conversation logs to identify patterns, issues, and metrics.
 
-**Key Capabilities**:
+**Current Status**: Basic context analysis is implemented. Full log analysis capabilities are planned for a future release.
+
+**Currently Available**:
+- Basic context retention analysis for multi-turn conversations
+- Simple conversation quality scoring
+
+**Planned Capabilities**:
 - Multi-format support: JSON, CSV, plain text
 - Automatic format detection
 - Pattern recognition and anomaly detection
 - Statistical metrics calculation
-- Context retention analysis
 - Advanced filtering options
 
-**Configuration Structure**:
+**Planned Configuration Structure**:
 ```swift
 struct AnalysisConfig {
     var logSource: LogSource           // File path and format
@@ -82,47 +98,7 @@ struct AnalysisConfig {
 }
 ```
 
-**Supported Log Formats**:
-
-**JSON**:
-```json
-[
-  {
-    "sender": "user",
-    "content": "Hello",
-    "timestamp": "2024-12-12T10:00:00Z"
-  },
-  {
-    "sender": "bot",
-    "content": "Hi there!",
-    "timestamp": "2024-12-12T10:00:01Z"
-  }
-]
-```
-
-**CSV**:
-```csv
-timestamp,sender,content
-2024-12-12T10:00:00Z,user,Hello
-2024-12-12T10:00:01Z,bot,Hi there!
-```
-
-**Text** (alternating user/bot):
-```
-Hello
-Hi there!
-How are you?
-I'm doing well, thanks!
-```
-
-**Metrics Calculated**:
-- Total conversations and messages
-- Average messages per conversation
-- Response times (if available)
-- Pass/fail rates
-- Pattern frequencies
-
-**Use Cases**:
+**Use Cases** *(When fully implemented)*:
 - Post-mortem analysis of production logs
 - Identifying common failure patterns
 - Quality metrics over time
@@ -130,7 +106,7 @@ I'm doing well, thanks!
 
 ---
 
-### 3. Adversarial Testing
+### 3. Adversarial Testing ✅
 
 **Purpose**: Use AI models to automatically test your chatbot with realistic, challenging conversations.
 
@@ -251,20 +227,24 @@ Patience/
 │   ├── AppState.swift        # @MainActor state management
 │   └── Types.swift           # Codable, Sendable types
 ├── Core/                     # Business logic
-│   ├── TestExecutor.swift           # Test execution engine
-│   ├── AnalysisEngine.swift         # Log analysis
-│   ├── ReportGenerator.swift        # Report generation
-│   ├── AdversarialTestOrchestrator.swift  # AI testing
-│   └── KeychainManager.swift        # Secure storage
+│   ├── TestExecutor.swift           # Test execution engine ✅
+│   ├── AnalysisEngine.swift         # Basic context analysis ⚠️
+│   ├── ReportGenerator.swift        # Report generation ✅
+│   ├── AdversarialTestOrchestrator.swift  # AI testing ✅
+│   └── KeychainManager.swift        # Secure storage ✅
 ├── Views/                    # UI layer (SwiftUI)
-│   ├── TestingView.swift
-│   ├── AnalysisView.swift
-│   ├── AdversarialView.swift
-│   ├── ReportsView.swift
-│   └── SettingsView.swift
-├── ContentView.swift         # Main navigation
-└── PatienceApp.swift         # App entry point
+│   ├── TestingView.swift            # Live testing interface ✅
+│   ├── AnalysisView.swift           # Analysis interface (basic) ⚠️
+│   ├── AdversarialView.swift        # Adversarial testing interface ✅
+│   ├── ReportsView.swift            # Report viewing ✅
+│   └── SettingsView.swift           # App settings ✅
+├── ContentView.swift         # Main navigation ✅
+└── PatienceApp.swift         # App entry point ✅
 ```
+
+**Legend:**
+- ✅ Fully implemented
+- ⚠️ Partially implemented / Basic functionality only
 
 ### Design Patterns
 

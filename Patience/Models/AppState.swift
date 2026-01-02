@@ -9,6 +9,10 @@ import SwiftUI
 import Combine
 // Import Security framework for Keychain access
 import Security
+// Import AppKit for file dialogs (NSSavePanel, NSOpenPanel)
+import AppKit
+// Import UniformTypeIdentifiers for file type handling
+import UniformTypeIdentifiers
 
 /// Central state manager for the entire application
 /// Holds all test configurations, results, and runtime state
@@ -341,6 +345,171 @@ class AppState: ObservableObject {
             showErrorMessage("Adversarial test completed with \(conversations.count) conversation(s).", isError: false)
         } catch {
             showErrorMessage("Adversarial test failed: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Configuration Export/Import
+    
+    /// Exports a single test configuration to a JSON file
+    /// Opens a save dialog for the user to choose location and filename
+    /// 
+    /// - Parameter config: The test configuration to export
+    /// 
+    /// Side effects:
+    /// - Opens NSSavePanel for file selection
+    /// - Writes JSON file to selected location
+    /// - Shows success/error message to user
+    func exportTestConfig(_ config: TestConfig) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "\(config.targetBot.name.replacingOccurrences(of: " ", with: "-").lowercased())-config.json"
+        panel.title = "Export Test Configuration"
+        panel.message = "Choose where to save the test configuration"
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                do {
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                    let data = try encoder.encode(config)
+                    try data.write(to: url)
+                    
+                    Task { @MainActor in
+                        self.showErrorMessage("Configuration exported successfully to \(url.lastPathComponent)", isError: false)
+                    }
+                } catch {
+                    Task { @MainActor in
+                        self.showErrorMessage("Failed to export configuration: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Exports all test configurations to a JSON file
+    /// Creates a single file containing an array of all configurations
+    /// 
+    /// Side effects:
+    /// - Opens NSSavePanel for file selection
+    /// - Writes JSON file with all configurations
+    /// - Shows success/error message to user
+    func exportAllTestConfigs() {
+        guard !testConfigs.isEmpty else {
+            showErrorMessage("No configurations to export", isError: false)
+            return
+        }
+        
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "patience-test-configs.json"
+        panel.title = "Export All Test Configurations"
+        panel.message = "Choose where to save all test configurations"
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                do {
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                    let data = try encoder.encode(self.testConfigs)
+                    try data.write(to: url)
+                    
+                    Task { @MainActor in
+                        self.showErrorMessage("Exported \(self.testConfigs.count) configuration(s) successfully to \(url.lastPathComponent)", isError: false)
+                    }
+                } catch {
+                    Task { @MainActor in
+                        self.showErrorMessage("Failed to export configurations: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Imports test configurations from a JSON file
+    /// Supports both single configuration and array of configurations
+    /// Merges with existing configurations (doesn't replace)
+    /// 
+    /// Side effects:
+    /// - Opens NSOpenPanel for file selection
+    /// - Reads and parses JSON file
+    /// - Adds configurations to testConfigs array
+    /// - Automatically saves configurations
+    /// - Shows success/error message to user
+    func importTestConfigs() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.title = "Import Test Configurations"
+        panel.message = "Choose a JSON file containing test configurations"
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.urls.first {
+                do {
+                    let data = try Data(contentsOf: url)
+                    let decoder = JSONDecoder()
+                    
+                    var importedConfigs: [TestConfig] = []
+                    
+                    // Try to decode as array of configurations first
+                    if let configArray = try? decoder.decode([TestConfig].self, from: data) {
+                        importedConfigs = configArray
+                    }
+                    // If that fails, try to decode as single configuration
+                    else if let singleConfig = try? decoder.decode(TestConfig.self, from: data) {
+                        importedConfigs = [singleConfig]
+                    }
+                    else {
+                        throw NSError(domain: "ImportError", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not contain valid test configuration(s)"])
+                    }
+                    
+                    // Generate new IDs for imported configs to avoid conflicts
+                    let configsWithNewIds = importedConfigs.map { config in
+                        var newConfig = config
+                        newConfig.id = UUID()
+                        return newConfig
+                    }
+                    
+                    Task { @MainActor in
+                        // Add to existing configurations
+                        self.testConfigs.append(contentsOf: configsWithNewIds)
+                        self.saveConfigs()
+                        
+                        self.showErrorMessage("Successfully imported \(configsWithNewIds.count) configuration(s) from \(url.lastPathComponent)", isError: false)
+                    }
+                } catch {
+                    Task { @MainActor in
+                        self.showErrorMessage("Failed to import configurations: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Copies a test configuration to the system clipboard as JSON
+    /// Useful for quick sharing via chat, email, etc.
+    /// 
+    /// - Parameter config: The test configuration to copy
+    /// 
+    /// Side effects:
+    /// - Copies JSON to system clipboard
+    /// - Shows success/error message to user
+    func copyConfigToClipboard(_ config: TestConfig) {
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(config)
+            
+            if let jsonString = String(data: data, encoding: .utf8) {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(jsonString, forType: .string)
+                
+                showErrorMessage("Configuration copied to clipboard", isError: false)
+            } else {
+                showErrorMessage("Failed to convert configuration to text")
+            }
+        } catch {
+            showErrorMessage("Failed to copy configuration: \(error.localizedDescription)")
         }
     }
     

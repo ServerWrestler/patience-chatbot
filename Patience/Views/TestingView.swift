@@ -21,11 +21,31 @@ struct TestingView: View {
                 }
 
                 Spacer()
+                
+                // Export/Import buttons
+                HStack(spacing: 8) {
+                    Menu("Import") {
+                        Button("Import Configuration...") {
+                            appState.importTestConfigs()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(appState.isRunningTest)
+                    
+                    Menu("Export") {
+                        Button("Export All Configurations...") {
+                            appState.exportAllTestConfigs()
+                        }
+                        .disabled(appState.testConfigs.isEmpty)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(appState.testConfigs.isEmpty)
 
-                Button("New Configuration") {
-                    showingConfigEditor = true
+                    Button("New Configuration") {
+                        showingConfigEditor = true
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
             }
             .padding()
 
@@ -169,7 +189,20 @@ struct TestConfigRow: View {
             }
 
             Button("Duplicate") {
-                // Duplicate configuration
+                var duplicated = config
+                duplicated.id = UUID()
+                duplicated.targetBot.name = "\(config.targetBot.name) Copy"
+                appState.addTestConfig(duplicated)
+            }
+            
+            Divider()
+            
+            Button("Export...") {
+                appState.exportTestConfig(config)
+            }
+            
+            Button("Copy to Clipboard") {
+                appState.copyConfigToClipboard(config)
             }
 
             Divider()
@@ -277,6 +310,7 @@ struct TestExecutionPanel: View {
         }
         .sheet(isPresented: $showingResults) {
             TestResultsView()
+                .frame(minWidth: 900, minHeight: 700)
         }
     }
 }
