@@ -5,8 +5,29 @@ struct TestingView: View {
     @State private var selectedConfigId: TestConfig.ID?
     @State private var showingConfigEditor = false
 
-    @State private var editingConfig: TestConfig? = nil
-    @State private var showingEditSheet = false
+    /// Combined state for editing - contains both the config and presentation state
+    /// This prevents race conditions between showingEditSheet and editingConfig
+    @State private var editingState: EditingState = .none
+    
+    /// Enum to manage editing state more robustly
+    private enum EditingState {
+        case none
+        case editing(TestConfig)
+        
+        var isPresented: Bool {
+            switch self {
+            case .none: return false
+            case .editing: return true
+            }
+        }
+        
+        var config: TestConfig? {
+            switch self {
+            case .none: return nil
+            case .editing(let config): return config
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -84,8 +105,8 @@ struct TestingView: View {
 
                         List(appState.testConfigs, selection: $selectedConfigId) { config in
                             TestConfigRow(config: config, onEdit: { cfg in
-                                editingConfig = cfg
-                                showingEditSheet = true
+                                // Set editing state atomically - no race condition possible
+                                editingState = .editing(cfg)
                             })
                             .contentShape(Rectangle())
                         }
@@ -97,8 +118,8 @@ struct TestingView: View {
                     VStack {
                         if let selectedId = selectedConfigId, let config = appState.testConfigs.first(where: { $0.id == selectedId }) {
                             TestExecutionPanel(config: config, onEdit: { cfg in
-                                editingConfig = cfg
-                                showingEditSheet = true
+                                // Set editing state atomically - no race condition possible
+                                editingState = .editing(cfg)
                             })
                         } else {
                             if #available(macOS 14.0, *) {
@@ -130,12 +151,21 @@ struct TestingView: View {
                 .frame(minWidth: 900, minHeight: 700)
                 .environmentObject(appState)
         }
-        .sheet(isPresented: $showingEditSheet) {
-            TestConfigEditorView(initialConfig: editingConfig) { updated in
-                appState.updateTestConfig(updated)
+        .sheet(isPresented: Binding(
+            get: { editingState.isPresented },
+            set: { if !$0 { editingState = .none } }
+        )) {
+            // The config is guaranteed to be available when the sheet is presented
+            // because editingState.isPresented is only true when we have a config
+            if let configToEdit = editingState.config {
+                TestConfigEditorView(initialConfig: configToEdit) { updated in
+                    appState.updateTestConfig(updated)
+                    // Clear the editing state after successful update
+                    editingState = .none
+                }
+                .frame(minWidth: 900, minHeight: 700)
+                .environmentObject(appState)
             }
-            .frame(minWidth: 900, minHeight: 700)
-            .environmentObject(appState)
         }
     }
 }

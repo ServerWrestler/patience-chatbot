@@ -7,6 +7,31 @@ struct AnalysisView: View {
     @State private var showingConfigEditor = false
     @State private var showingFilePicker = false
     
+    /// Combined state for editing - prevents race conditions between button click and sheet presentation
+    /// Uses enum to ensure config data and presentation state are always in sync
+    @State private var editingState: EditingState = .none
+    
+    /// Enum to manage editing state robustly
+    /// Prevents SwiftUI race conditions where config becomes nil between button click and sheet presentation
+    fileprivate enum EditingState {
+        case none
+        case editing(AnalysisConfig)
+        
+        var isPresented: Bool {
+            switch self {
+            case .none: return false
+            case .editing: return true
+            }
+        }
+        
+        var config: AnalysisConfig? {
+            switch self {
+            case .none: return nil
+            case .editing(let config): return config
+            }
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -152,6 +177,15 @@ struct AnalysisView: View {
         }
         .sheet(isPresented: $showingConfigEditor) {
             AnalysisConfigEditorView()
+        }
+        .sheet(isPresented: Binding(
+            get: { editingState.isPresented },
+            set: { if !$0 { editingState = .none } }
+        )) {
+            AnalysisConfigEditorView(initialConfig: editingState.config) { updatedConfig in
+                appState.updateAnalysisConfig(updatedConfig)
+                editingState = .none
+            }
         }
         .fileImporter(
             isPresented: $showingFilePicker,

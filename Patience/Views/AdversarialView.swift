@@ -1,9 +1,32 @@
 import SwiftUI
 
+fileprivate enum EditingState {
+    case none
+    case editing(AdversarialTestConfig)
+
+    var isPresented: Bool {
+        switch self {
+        case .none: return false
+        case .editing: return true
+        }
+    }
+
+    var config: AdversarialTestConfig? {
+        switch self {
+        case .none: return nil
+        case .editing(let config): return config
+        }
+    }
+}
+
 struct AdversarialView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedConfigId: AdversarialTestConfig.ID?
     @State private var showingConfigEditor = false
+    
+    /// Combined state for editing - prevents race conditions between button click and sheet presentation
+    /// Uses enum to ensure config data and presentation state are always in sync
+    @State private var editingState: EditingState = .none
     
     var body: some View {
         VStack(spacing: 0) {
@@ -99,6 +122,17 @@ struct AdversarialView: View {
             AdversarialConfigEditorView()
                 .frame(minWidth: 900, minHeight: 700)
                 .environmentObject(appState)
+        }
+        .sheet(isPresented: Binding(
+            get: { editingState.isPresented },
+            set: { if !$0 { editingState = .none } }
+        )) {
+            AdversarialConfigEditorView(initialConfig: editingState.config) { updatedConfig in
+                appState.updateAdversarialConfig(updatedConfig)
+                editingState = .none
+            }
+            .frame(minWidth: 900, minHeight: 700)
+            .environmentObject(appState)
         }
     }
 }
@@ -307,6 +341,14 @@ struct AdversarialExecutionPanel: View {
 }
 
 struct AdversarialConfigEditorView: View {
+    /// Optional existing configuration to edit
+    /// If nil, creates a new configuration
+    let initialConfig: AdversarialTestConfig?
+    
+    /// Optional callback when configuration is saved
+    /// If nil, saves directly to appState
+    let onSave: ((AdversarialTestConfig) -> Void)?
+    
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     
@@ -324,17 +366,51 @@ struct AdversarialConfigEditorView: View {
     @State private var goals: [String] = []
     @State private var newGoal = ""
     
+    /// Initializes the editor with optional existing configuration
+    /// If initialConfig provided, pre-fills all fields with existing values
+    /// Otherwise uses default values
+    /// 
+    /// - Parameters:
+    ///   - initialConfig: Optional existing configuration to edit
+    ///   - onSave: Optional callback when configuration is saved
+    init(initialConfig: AdversarialTestConfig? = nil, onSave: ((AdversarialTestConfig) -> Void)? = nil) {
+        self.initialConfig = initialConfig
+        self.onSave = onSave
+        
+        self._targetBotName = State(initialValue: initialConfig?.targetBot.name ?? "")
+        self._targetBotEndpoint = State(initialValue: initialConfig?.targetBot.endpoint ?? "")
+        self._targetBotProtocol = State(initialValue: initialConfig?.targetBot.botProtocol ?? .http)
+        self._adversarialProvider = State(initialValue: initialConfig?.adversarialBot.provider ?? .ollama)
+        self._adversarialModel = State(initialValue: initialConfig?.adversarialBot.model ?? "")
+        self._adversarialApiKey = State(initialValue: initialConfig?.adversarialBot.apiKey ?? "")
+        self._strategy = State(initialValue: initialConfig?.conversation.strategy ?? .exploratory)
+        self._maxTurns = State(initialValue: initialConfig?.conversation.maxTurns ?? 10)
+        self._numConversations = State(initialValue: initialConfig?.execution.numConversations ?? 1)
+        self._goals = State(initialValue: initialConfig?.conversation.goals ?? [])
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack(alignment: .center) {
-                Text("New Adversarial Config")
+                Text(initialConfig == nil ? "New Adversarial Config" : "Edit Adversarial Config")
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
                 Button("Cancel") { dismiss() }
-                Button("Create") {
-                    createConfiguration()
+                Button(initialConfig == nil ? "Create" : "Save") {
+                    let config = buildConfiguration()
+                    if let onSave = onSave {
+                        onSave(config)
+                    } else if let existingConfig = initialConfig {
+                        // Update existing configuration
+                        var updatedConfig = config
+                        updatedConfig.id = existingConfig.id  // Preserve original ID
+                        appState.updateAdversarialConfig(updatedConfig)
+                    } else {
+                        // Create new configuration
+                        appState.addAdversarialConfig(config)
+                    }
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -463,8 +539,16 @@ struct AdversarialConfigEditorView: View {
         goals.remove(atOffsets: offsets)
     }
     
-    private func createConfiguration() {
-        let config = AdversarialTestConfig(
+    /// Builds an AdversarialTestConfig from current form state
+    /// Combines all sections (target bot, adversarial bot, conversation, execution, reporting)
+    /// 
+    /// - Returns: Complete AdversarialTestConfig ready to save
+    /// 
+    /// API key is only included if:
+    /// - adversarialProvider is not ollama
+    /// - adversarialApiKey is not empty
+    private func buildConfiguration() -> AdversarialTestConfig {
+        var config = AdversarialTestConfig(
             targetBot: AdversarialBotConfig(
                 name: targetBotName,
                 botProtocol: targetBotProtocol,
@@ -475,7 +559,7 @@ struct AdversarialConfigEditorView: View {
             adversarialBot: AdversarialBotSettings(
                 provider: adversarialProvider,
                 model: adversarialModel.isEmpty ? nil : adversarialModel,
-                apiKey: adversarialApiKey.isEmpty ? nil : adversarialApiKey,
+                apiKey: (adversarialProvider != .ollama && !adversarialApiKey.isEmpty) ? adversarialApiKey : nil,
                 endpoint: nil,
                 temperature: nil,
                 maxTokens: nil
@@ -504,7 +588,12 @@ struct AdversarialConfigEditorView: View {
             )
         )
         
-        appState.addAdversarialConfig(config)
+        // Preserve original ID if editing existing configuration
+        if let existingConfig = initialConfig {
+            config.id = existingConfig.id
+        }
+        
+        return config
     }
 }
 

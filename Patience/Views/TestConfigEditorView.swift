@@ -71,11 +71,30 @@ struct TestConfigEditorView: View {
     /// Each scenario has conversation steps and expected outcomes
     @State private var scenarios: [Scenario] = []
     
-    /// Whether the scenario editor sheet is visible
-    @State private var showingScenarioEditor = false
+    /// Combined state for scenario editing - prevents race conditions
+    /// Uses enum to ensure scenario and presentation state are always in sync
+    @State private var scenarioEditingState: ScenarioEditingState = .none
     
-    /// Scenario currently being edited (nil if creating new)
-    @State private var editingScenario: Scenario? = nil
+    /// Enum to manage scenario editing state robustly
+    private enum ScenarioEditingState {
+        case none
+        case editing(Scenario)
+        case creating
+        
+        var isPresented: Bool {
+            switch self {
+            case .none: return false
+            case .editing, .creating: return true
+            }
+        }
+        
+        var scenario: Scenario? {
+            switch self {
+            case .none, .creating: return nil
+            case .editing(let scenario): return scenario
+            }
+        }
+    }
     
     // MARK: - Validation State
     
@@ -265,8 +284,8 @@ struct TestConfigEditorView: View {
                                         }
                                         Spacer()
                                         Button("Edit") {
-                                            editingScenario = scenario
-                                            showingScenarioEditor = true
+                                            // Set editing state atomically - no race condition possible
+                                            scenarioEditingState = .editing(scenario)
                                         }
                                         .buttonStyle(.bordered)
                                     }
@@ -276,7 +295,8 @@ struct TestConfigEditorView: View {
                             }
                             HStack {
                                 Button("Add Scenario") {
-                                    showingScenarioEditor = true
+                                    // Set creating state atomically
+                                    scenarioEditingState = .creating
                                 }
                                 .buttonStyle(.borderedProminent)
                                 Spacer()
@@ -351,14 +371,17 @@ struct TestConfigEditorView: View {
                 .padding(20)
             }
         }
-        .sheet(isPresented: $showingScenarioEditor) {
-            ScenarioEditorView(initialScenario: editingScenario) { scenario in
+        .sheet(isPresented: Binding(
+            get: { scenarioEditingState.isPresented },
+            set: { if !$0 { scenarioEditingState = .none } }
+        )) {
+            ScenarioEditorView(initialScenario: scenarioEditingState.scenario) { scenario in
                 if let index = scenarios.firstIndex(where: { $0.id == scenario.id }) {
                     scenarios[index] = scenario
                 } else {
                     scenarios.append(scenario)
                 }
-                editingScenario = nil
+                scenarioEditingState = .none
             }
             .frame(minWidth: 700, minHeight: 600)
         }
@@ -703,16 +726,27 @@ struct ScenarioEditorView: View {
     }
 }
 
-/// Editor view for creating log analysis configurations
+/// Editor view for creating and modifying log analysis configurations
 /// Simpler than TestConfigEditorView - just configures what logs to analyze
 /// 
 /// Sections:
 /// - Log Source: File path and format (JSON, CSV, text, auto)
 /// - Analysis Options: What analysis to perform (metrics, patterns, context)
 /// 
-/// Always creates new configuration (no editing mode)
-/// Saves directly to appState
+/// Can be used in two modes:
+/// 1. Create new config (initialConfig = nil)
+/// 2. Edit existing config (initialConfig provided)
+/// 
+/// Changes are saved via onSave callback or directly to appState
 struct AnalysisConfigEditorView: View {
+    /// Optional existing configuration to edit
+    /// If nil, creates a new configuration
+    let initialConfig: AnalysisConfig?
+    
+    /// Optional callback when configuration is saved
+    /// If nil, saves directly to appState
+    let onSave: ((AnalysisConfig) -> Void)?
+    
     /// @Environment allows dismissing this sheet
     @Environment(\.dismiss) private var dismiss
     
@@ -723,7 +757,7 @@ struct AnalysisConfigEditorView: View {
     // MARK: - Analysis Configuration State
     
     /// @State means this view owns these values
-    /// All default to sensible values for new configuration
+    /// Initialized from initialConfig if editing, otherwise defaults
     
     /// Path to the log file to analyze
     @State private var logPath = ""
@@ -741,17 +775,46 @@ struct AnalysisConfigEditorView: View {
     /// Whether to analyze context retention (bot memory)
     @State private var checkContextRetention = true
     
+    /// Initializes the editor with optional existing configuration
+    /// If initialConfig provided, pre-fills all fields with existing values
+    /// Otherwise uses default values
+    /// 
+    /// - Parameters:
+    ///   - initialConfig: Optional existing configuration to edit
+    ///   - onSave: Optional callback when configuration is saved
+    init(initialConfig: AnalysisConfig? = nil, onSave: ((AnalysisConfig) -> Void)? = nil) {
+        self.initialConfig = initialConfig
+        self.onSave = onSave
+        
+        self._logPath = State(initialValue: initialConfig?.logSource.path ?? "")
+        self._logFormat = State(initialValue: initialConfig?.logSource.format ?? .auto)
+        self._calculateMetrics = State(initialValue: initialConfig?.analysis.calculateMetrics ?? true)
+        self._detectPatterns = State(initialValue: initialConfig?.analysis.detectPatterns ?? true)
+        self._checkContextRetention = State(initialValue: initialConfig?.analysis.checkContextRetention ?? true)
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack(alignment: .center) {
-                Text("New Analysis Configuration")
+                Text(initialConfig == nil ? "New Analysis Configuration" : "Edit Analysis Configuration")
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
                 Button("Cancel") { dismiss() }
-                Button("Create") {
-                    createConfiguration()
+                Button(initialConfig == nil ? "Create" : "Save") {
+                    let config = buildConfiguration()
+                    if let onSave = onSave {
+                        onSave(config)
+                    } else if let existingConfig = initialConfig {
+                        // Update existing configuration
+                        var updatedConfig = config
+                        updatedConfig.id = existingConfig.id  // Preserve original ID
+                        appState.updateAnalysisConfig(updatedConfig)
+                    } else {
+                        // Create new configuration
+                        appState.addAnalysisConfig(config)
+                    }
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -815,11 +878,14 @@ struct AnalysisConfigEditorView: View {
         }
     }
     
-    /// Creates an AnalysisConfig from current form state
-    /// Saves directly to appState.addAnalysisConfig()
+    /// Builds an AnalysisConfig from current form state
+    /// Combines log source, analysis settings, and reporting configuration
+    /// 
+    /// - Returns: Complete AnalysisConfig ready to save
+    /// 
     /// Uses appState.defaultOutputPath for report output
-    private func createConfiguration() {
-        let config = AnalysisConfig(
+    private func buildConfiguration() -> AnalysisConfig {
+        var config = AnalysisConfig(
             logSource: LogSource(path: logPath, format: logFormat),
             filters: nil,
             validation: nil,
@@ -836,7 +902,12 @@ struct AnalysisConfigEditorView: View {
             )
         )
         
-        appState.addAnalysisConfig(config)
+        // Preserve original ID if editing existing configuration
+        if let existingConfig = initialConfig {
+            config.id = existingConfig.id
+        }
+        
+        return config
     }
 }
 
