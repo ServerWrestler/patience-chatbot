@@ -448,18 +448,49 @@ class AppState: ObservableObject {
                     let data = try Data(contentsOf: url)
                     let decoder = JSONDecoder()
                     
+                    // Add detailed error logging
+                    print("DEBUG IMPORT: File size: \(data.count) bytes")
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("DEBUG IMPORT: JSON content preview: \(String(jsonString.prefix(500)))")
+                    }
+                    
                     var importedConfigs: [TestConfig] = []
                     
                     // Try to decode as array of configurations first
-                    if let configArray = try? decoder.decode([TestConfig].self, from: data) {
+                    do {
+                        let configArray = try decoder.decode([TestConfig].self, from: data)
                         importedConfigs = configArray
-                    }
-                    // If that fails, try to decode as single configuration
-                    else if let singleConfig = try? decoder.decode(TestConfig.self, from: data) {
-                        importedConfigs = [singleConfig]
-                    }
-                    else {
-                        throw NSError(domain: "ImportError", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not contain valid test configuration(s)"])
+                        print("DEBUG IMPORT: Successfully decoded as array of \(configArray.count) configs")
+                    } catch let arrayError {
+                        print("DEBUG IMPORT: Array decode failed: \(arrayError)")
+                        
+                        // If that fails, try to decode as single configuration
+                        do {
+                            let singleConfig = try decoder.decode(TestConfig.self, from: data)
+                            importedConfigs = [singleConfig]
+                            print("DEBUG IMPORT: Successfully decoded as single config")
+                        } catch let singleError {
+                            print("DEBUG IMPORT: Single config decode failed: \(singleError)")
+                            
+                            // Provide detailed error information
+                            if let decodingError = singleError as? DecodingError {
+                                print("DEBUG IMPORT: Decoding error details: \(decodingError)")
+                                switch decodingError {
+                                case .keyNotFound(let key, let context):
+                                    print("DEBUG IMPORT: Missing key '\(key.stringValue)' at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                                case .typeMismatch(let type, let context):
+                                    print("DEBUG IMPORT: Type mismatch for type \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                                case .valueNotFound(let type, let context):
+                                    print("DEBUG IMPORT: Value not found for type \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                                case .dataCorrupted(let context):
+                                    print("DEBUG IMPORT: Data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                                @unknown default:
+                                    print("DEBUG IMPORT: Unknown decoding error")
+                                }
+                            }
+                            
+                            throw NSError(domain: "ImportError", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not contain valid test configuration(s). Check console for detailed error information."])
+                        }
                     }
                     
                     // Generate new IDs for imported configs to avoid conflicts

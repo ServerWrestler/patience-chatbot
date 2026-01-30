@@ -2,6 +2,8 @@
 
 A comprehensive native macOS application for chatbot testing with three powerful modes: live scenarios, log analysis, and AI-powered adversarial testing.
 
+<img width="1084" height="345" alt="screenshot" src="https://github.com/user-attachments/assets/cb6299e2-9b3a-4216-a745-184470cee3a9" />
+
 ## Features
 
 ### 🚀 Live Testing

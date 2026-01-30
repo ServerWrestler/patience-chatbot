@@ -98,13 +98,6 @@ struct TestConfigEditorView: View {
     
     // MARK: - Validation State
     
-    /// Default validation type for responses (pattern, semantic, custom)
-    @State private var validationType: ValidationType = .pattern
-    
-    /// Threshold for semantic similarity validation (0.0-1.0)
-    /// Only used when validationType is .semantic
-    @State private var semanticThreshold: Double = 0.8
-    
     // MARK: - Timing State
     
     /// Whether to add realistic delays between messages
@@ -154,8 +147,6 @@ struct TestConfigEditorView: View {
         self._authType = State(initialValue: initialConfig?.targetBot.authentication?.type ?? .bearer)
         self._authCredentials = State(initialValue: initialConfig?.targetBot.authentication?.credentials ?? "")
         self._scenarios = State(initialValue: initialConfig?.scenarios ?? [])
-        self._validationType = State(initialValue: initialConfig?.validation.defaultType ?? .pattern)
-        self._semanticThreshold = State(initialValue: initialConfig?.validation.semanticSimilarityThreshold ?? 0.8)
         self._enableDelays = State(initialValue: initialConfig?.timing.enableDelays ?? true)
         self._baseDelay = State(initialValue: initialConfig?.timing.baseDelay ?? 1000)
         self._delayPerCharacter = State(initialValue: initialConfig?.timing.delayPerCharacter ?? 50)
@@ -304,35 +295,6 @@ struct TestConfigEditorView: View {
                         }
                     }
 
-                    GroupBox("Validation") {
-                        Text("Set the default validation type used when scenario steps don't specify their own validation type.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.bottom, 8)
-                        
-                        VStack(alignment: .leading, spacing: 12) {
-                            LabeledContent("Default Type") {
-                                Picker("Default Type", selection: $validationType) {
-                                    ForEach(ValidationType.allCases, id: \.self) { type in
-                                        Text(type.rawValue.capitalized).tag(type)
-                                    }
-                                }
-                                .labelsHidden()
-                                .frame(maxWidth: 300, alignment: .leading)
-                            }
-                            if validationType == .semantic {
-                                LabeledContent("Similarity Threshold") {
-                                    HStack(spacing: 8) {
-                                        Slider(value: $semanticThreshold, in: 0...1, step: 0.1)
-                                            .frame(maxWidth: 300)
-                                        Text(String(format: "%.1f", semanticThreshold))
-                                            .frame(width: 40, alignment: .trailing)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     GroupBox("Timing") {
                         VStack(alignment: .leading, spacing: 12) {
                             LabeledContent("Enable Delays") {
@@ -420,8 +382,8 @@ struct TestConfigEditorView: View {
             ),
             scenarios: scenarios,
             validation: ValidationConfig(
-                defaultType: validationType,
-                semanticSimilarityThreshold: validationType == .semantic ? semanticThreshold : nil,
+                defaultType: .pattern,
+                semanticSimilarityThreshold: nil,
                 customValidators: nil
             ),
             timing: TimingConfig(
@@ -513,6 +475,32 @@ struct ScenarioEditorView: View {
     
     var body: some View {
         NavigationView {
+            formContent
+        }
+        .frame(minWidth: 700, minHeight: 600)
+        .navigationTitle("New Scenario")
+#if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+#endif
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+            
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    saveScenario()
+                    dismiss()
+                }
+                .disabled(scenarioName.isEmpty || steps.isEmpty)
+            }
+        }
+    }
+    
+    /// Form content separated to avoid complex type-checking issues
+    private var formContent: some View {
             ScrollView {
                 Form {
                     Section("Scenario Details") {
@@ -527,73 +515,9 @@ struct ScenarioEditorView: View {
                             .foregroundColor(.secondary)
                             .padding(.bottom, 8)
                         
-                        ForEach(steps.indices, id: \.self) { index in
-                            VStack(alignment: .leading, spacing: 8) {
-                                TextField("Message", text: $steps[index].message)
-                                    .textFieldStyle(.roundedBorder)
-                                
-                                if steps[index].expectedResponse != nil {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Expected Response:")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
-                                        
-                                        TextField("Expected response", text: Binding(
-                                            get: { steps[index].expectedResponse?.expected ?? "" },
-                                            set: { newValue in
-                                                if steps[index].expectedResponse != nil {
-                                                    steps[index].expectedResponse?.expected = newValue
-                                                }
-                                            }
-                                        ))
-                                        .textFieldStyle(.roundedBorder)
-                                        
-                                        HStack {
-                                            Text("Type:")
-                                                .font(.caption)
-                                            
-                                            Picker("Validation Type", selection: Binding(
-                                                get: { steps[index].expectedResponse?.validationType ?? .pattern },
-                                                set: { newValue in
-                                                    if steps[index].expectedResponse != nil {
-                                                        steps[index].expectedResponse?.validationType = newValue
-                                                    }
-                                                }
-                                            )) {
-                                                ForEach(ValidationType.allCases, id: \.self) { type in
-                                                    Text(type.rawValue.capitalized).tag(type)
-                                                }
-                                            }
-                                            .pickerStyle(.menu)
-                                            .frame(maxWidth: 150)
-                                        }
-                                    }
-                                    .padding(.leading, 8)
-                                    .background(Color(.controlBackgroundColor))
-                                    .cornerRadius(4)
-                                }
-                                
-                                HStack {
-                                    if steps[index].expectedResponse == nil {
-                                        Button("Add Expected Response") {
-                                            steps[index].expectedResponse = ResponseCriteria(
-                                                validationType: .pattern,
-                                                expected: "",
-                                                threshold: 0.8
-                                            )
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .controlSize(.small)
-                                    } else {
-                                        Button("Remove Expected Response") {
-                                            steps[index].expectedResponse = nil
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .controlSize(.small)
-                                    }
-                                }
-                            }
-                            .padding(.vertical, 4)
+                        // Use enumerated() to create stable index-value pairs for SwiftUI
+                        ForEach(Array(steps.enumerated()), id: \.offset) { index, _ in
+                            ConversationStepEditor(step: $steps[index])
                         }
                         .onDelete(perform: deleteStep)
                         
@@ -608,7 +532,8 @@ struct ScenarioEditorView: View {
                             .foregroundColor(.secondary)
                             .padding(.bottom, 8)
                         
-                        ForEach(expectedOutcomes.indices, id: \.self) { index in
+                        // Use enumerated() to create stable index-value pairs for SwiftUI
+                        ForEach(Array(expectedOutcomes.enumerated()), id: \.offset) { index, _ in
                             VStack(alignment: .leading, spacing: 8) {
                                 TextField("Expected outcome", text: $expectedOutcomes[index].expected)
                                     .textFieldStyle(.roundedBorder)
@@ -626,6 +551,26 @@ struct ScenarioEditorView: View {
                                     .frame(maxWidth: 150)
                                     
                                     Spacer()
+                                }
+                                
+                                // Show threshold slider for semantic validation
+                                if expectedOutcomes[index].type == .semantic {
+                                    HStack {
+                                        Text("Threshold:")
+                                            .font(.caption)
+                                        
+                                        Slider(value: Binding(
+                                            get: { expectedOutcomes[index].threshold ?? 0.7 },
+                                            set: { expectedOutcomes[index].threshold = $0 }
+                                        ), in: 0...1, step: 0.1)
+                                            .frame(maxWidth: 200)
+                                        
+                                        Text(String(format: "%.1f", expectedOutcomes[index].threshold ?? 0.7))
+                                            .font(.caption)
+                                            .frame(width: 30, alignment: .trailing)
+                                        
+                                        Spacer()
+                                    }
                                 }
                                 
                                 TextField("Description (optional)", text: Binding(
@@ -647,27 +592,6 @@ struct ScenarioEditorView: View {
                 }
                 .formStyle(.grouped)
             }
-            .frame(minWidth: 700, minHeight: 600)
-            .navigationTitle("New Scenario")
-#if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-#endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveScenario()
-                        dismiss()
-                    }
-                    .disabled(scenarioName.isEmpty || steps.isEmpty)
-                }
-            }
-        }
     }
     
     /// Adds a new conversation step with default values
@@ -1191,3 +1115,91 @@ struct ScenarioResultCard: View {
         .environmentObject(AppState())
 }
 
+
+/// Editor for individual conversation steps
+/// Handles message input and expected response validation with threshold controls
+/// Separated from main view to avoid Swift compiler type-checking issues with complex bindings
+struct ConversationStepEditor: View {
+    @Binding var step: ConversationStep
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Message", text: $step.message)
+                .textFieldStyle(.roundedBorder)
+            
+            if step.expectedResponse != nil {
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Expected response", text: Binding(
+                        get: { step.expectedResponse?.expected ?? "" },
+                        set: { newValue in
+                            step.expectedResponse?.expected = newValue
+                        }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    
+                    HStack {
+                        Text("Type:")
+                            .font(.caption)
+                        
+                        Picker("Validation Type", selection: Binding(
+                            get: { step.expectedResponse?.validationType ?? .pattern },
+                            set: { newValue in
+                                step.expectedResponse?.validationType = newValue
+                            }
+                        )) {
+                            ForEach(ValidationType.allCases, id: \.self) { type in
+                                Text(type.rawValue.capitalized).tag(type)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 150)
+                    }
+                    
+                    // Show threshold slider for semantic validation
+                    if step.expectedResponse?.validationType == .semantic {
+                        HStack {
+                            Text("Threshold:")
+                                .font(.caption)
+                            
+                            Slider(value: Binding(
+                                get: { step.expectedResponse?.threshold ?? 0.8 },
+                                set: { newValue in
+                                    step.expectedResponse?.threshold = newValue
+                                }
+                            ), in: 0...1, step: 0.1)
+                            .frame(maxWidth: 200)
+                            
+                            Text(String(format: "%.1f", step.expectedResponse?.threshold ?? 0.8))
+                                .font(.caption)
+                                .frame(width: 30, alignment: .trailing)
+                        }
+                    }
+                }
+                .padding(.leading, 8)
+                .background(Color(.controlBackgroundColor))
+                .cornerRadius(4)
+            }
+            
+            HStack {
+                if step.expectedResponse == nil {
+                    Button("Add Expected Response") {
+                        step.expectedResponse = ResponseCriteria(
+                            validationType: .pattern,
+                            expected: "",
+                            threshold: 0.8
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                } else {
+                    Button("Remove Expected Response") {
+                        step.expectedResponse = nil
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}

@@ -3,7 +3,6 @@ import SwiftUI
 private enum SidebarSelection: Hashable {
     case tab(TabSelection)
     case config(TestConfig.ID)
-    case result(TestResults.ID)
 }
 
 extension SidebarSelection {
@@ -12,8 +11,6 @@ extension SidebarSelection {
         case let (.tab(a), .tab(b)):
             return String(describing: a) == String(describing: b)
         case let (.config(a), .config(b)):
-            return String(describing: a) == String(describing: b)
-        case let (.result(a), .result(b)):
             return String(describing: a) == String(describing: b)
         default:
             return false
@@ -27,9 +24,6 @@ extension SidebarSelection {
             hasher.combine(String(describing: a))
         case let .config(a):
             hasher.combine(1)
-            hasher.combine(String(describing: a))
-        case let .result(a):
-            hasher.combine(2)
             hasher.combine(String(describing: a))
         }
     }
@@ -64,21 +58,6 @@ struct SidebarView: View {
                         Label(config.targetBot.name, systemImage: "gear")
                     }
                     .tag(SidebarSelection.config(config.id))
-                }
-            }
-            
-            Section("Recent Results") {
-                ForEach(appState.testResults.prefix(5)) { result in
-                    NavigationLink(destination: TestResultDetailView(result: result)) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Test Run")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(result.summary.passed)/\(result.summary.total) passed")
-                                .font(.caption2)
-                        }
-                    }
-                    .tag(SidebarSelection.result(result.id))
                 }
             }
         }

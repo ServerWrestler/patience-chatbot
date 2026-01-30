@@ -324,7 +324,8 @@ struct TestExecutionPanel: View {
                         }
 
                         LazyVStack(spacing: 8) {
-                            ForEach(appState.testResults.prefix(3)) { result in
+                            // Show most recent results first (sorted by start time descending)
+                            ForEach(appState.testResults.sorted(by: { $0.startTime > $1.startTime }).prefix(3)) { result in
                                 TestResultSummaryRow(result: result)
                             }
                         }
@@ -370,9 +371,10 @@ struct TestResultSummaryRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Test Run")
+                // Use bot name from the first scenario result if available
+                Text(resultDisplayName)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .fontWeight(.medium)
 
                 Text(formatDate(result.startTime))
                     .font(.caption2)
@@ -395,10 +397,24 @@ struct TestResultSummaryRow: View {
 
                 Text("\(Int(result.summary.passRate * 100))% pass")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(result.summary.passRate >= 0.8 ? .green : result.summary.passRate >= 0.5 ? .orange : .red)
             }
         }
         .padding(.vertical, 4)
+    }
+    
+    /// Creates a meaningful display name for the test result
+    /// Uses bot name from scenario results if available, otherwise falls back to "Test Run"
+    private var resultDisplayName: String {
+        // Try to get bot name from the first scenario result
+        if let firstScenario = result.scenarioResults.first,
+           let firstMessage = firstScenario.conversationHistory.messages.first(where: { $0.sender == .target }) {
+            // Extract a short identifier from the conversation
+            return "Test: \(firstScenario.scenarioName)"
+        }
+        
+        // Fallback to generic name with scenario count
+        return "\(result.summary.total) scenario\(result.summary.total == 1 ? "" : "s")"
     }
 
     private func formatDate(_ date: Date) -> String {

@@ -290,8 +290,14 @@ class CommunicationManager {
             endpointURL = bot.endpoint
         }
         
+        // Debug logging to help troubleshoot
+        print("DEBUG: Bot provider: \(bot.provider?.rawValue ?? "nil")")
+        print("DEBUG: Bot endpoint: \(bot.endpoint)")
+        print("DEBUG: Constructed endpointURL: \(endpointURL)")
+        
         // Validate endpoint URL
         guard let url = URL(string: endpointURL) else {
+            print("DEBUG: Invalid URL: \(endpointURL)")
             throw TestError.invalidEndpoint
         }
         
@@ -299,6 +305,9 @@ class CommunicationManager {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        print("DEBUG: HTTP Method: \(request.httpMethod ?? "nil")")
+        print("DEBUG: Content-Type: \(request.value(forHTTPHeaderField: "Content-Type") ?? "nil")")
         
         // Add authentication based on type
         if let auth = bot.authentication {
@@ -334,24 +343,71 @@ class CommunicationManager {
                 "prompt": message,
                 "stream": false
             ]
+            print("DEBUG: Using Ollama request format with model: \(model)")
         } else {
             // Generic chatbot format: simple message field
             requestBody = ["message": message]
+            print("DEBUG: Using generic request format")
         }
         
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        print("DEBUG: Request body: \(requestBody)")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+            print("DEBUG: Request body serialized successfully")
+        } catch {
+            print("DEBUG: Failed to serialize request body: \(error)")
+            throw error
+        }
         
         // Send request and measure response time
         let startTime = Date()
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let responseTime = Date().timeIntervalSince(startTime)
+        print("DEBUG: Sending request to: \(url)")
         
-        // Check for HTTP errors
-        guard let httpResponse = response as? HTTPURLResponse,
-              200...299 ~= httpResponse.statusCode else {
-            throw TestError.httpError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0)
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let responseTime = Date().timeIntervalSince(startTime)
+            
+            // Log response details
+            if let httpResponse = response as? HTTPURLResponse {
+                print("DEBUG: HTTP Status Code: \(httpResponse.statusCode)")
+                print("DEBUG: Response Headers: \(httpResponse.allHeaderFields)")
+                print("DEBUG: Response Time: \(responseTime)s")
+            }
+            
+            // Check for HTTP errors
+            guard let httpResponse = response as? HTTPURLResponse,
+                  200...299 ~= httpResponse.statusCode else {
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                print("DEBUG: HTTP Error - Status Code: \(statusCode)")
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("DEBUG: Error Response Headers: \(httpResponse.allHeaderFields)")
+                }
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("DEBUG: Error Response Body: \(responseString)")
+                }
+                throw TestError.httpError(statusCode: statusCode)
+            }
+            
+            // Continue with successful response processing
+            return try await processSuccessfulResponse(data: data, responseTime: responseTime, bot: bot)
+            
+        } catch {
+            print("DEBUG: Network error: \(error)")
+            throw error
         }
-        
+    }
+    
+    /// Processes a successful HTTP response from the bot
+    /// Parses JSON response based on provider type and returns BotResponse
+    /// 
+    /// - Parameters:
+    ///   - data: Response data from the HTTP request
+    ///   - responseTime: Time taken for the request
+    ///   - bot: Bot configuration for provider-specific parsing
+    /// - Returns: BotResponse with parsed content
+    /// - Throws: TestError if JSON parsing fails
+    private func processSuccessfulResponse(data: Data, responseTime: Double, bot: BotConfig) async throws -> BotResponse {
         // Parse JSON response based on provider type
         // Ollama returns {"response": "text"} format
         // Generic bots may return {"response": "text"} or other formats
@@ -361,11 +417,13 @@ class CommunicationManager {
         if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
             // Ollama response format: {"response": "bot message"}
             content = json?["response"] as? String ?? String(data: data, encoding: .utf8) ?? ""
+            print("DEBUG: Ollama response content: \(content)")
         } else {
             // Generic bot response: try "response" field first, then "message", then raw data
             content = json?["response"] as? String ?? 
                      json?["message"] as? String ?? 
                      String(data: data, encoding: .utf8) ?? ""
+            print("DEBUG: Generic response content: \(content)")
         }
         
         return BotResponse(
@@ -431,7 +489,6 @@ class CommunicationManager {
         )
     }
 }
-
 /// Validates bot responses using various strategies
 /// Supports exact matching, regex patterns, semantic similarity, and custom validators
 class ResponseValidator {
@@ -467,8 +524,10 @@ class ResponseValidator {
     ///   - config: Validation configuration
     /// - Returns: ValidationResult for the outcome
     func validateOutcome(messages: [ConversationMessage], criteria: ValidationCriteria, config: ValidationConfig) -> ValidationResult {
-        // Combine all messages into single text for validation
-        let conversationText = messages.map { $0.content }.joined(separator: " ")
+        // Only combine bot messages for validation (exclude user/patience messages)
+        // This prevents user input from interfering with bot response validation
+        let botMessages = messages.filter { $0.sender == .target }
+        let conversationText = botMessages.map { $0.content }.joined(separator: " ")
         
         // Route to appropriate validation method
         switch criteria.type {
@@ -481,30 +540,6 @@ class ResponseValidator {
         case .custom:
             return validateCustomInText(text: conversationText, validator: criteria.expected)
         }
-    }
-    
-    private func validateExactInText(text: String, expected: String) -> ValidationResult {
-        let passed = text.lowercased().contains(expected.lowercased())
-        
-        return ValidationResult(
-            passed: passed,
-            expected: expected,
-            actual: text,
-            message: passed ? "Expected text found in conversation" : "Expected text not found in conversation",
-            details: nil
-        )
-    }
-    
-    private func validateCustomInText(text: String, validator: String) -> ValidationResult {
-        // Create a mock response for custom validation
-        let mockResponse = BotResponse(
-            content: text,
-            timestamp: Date(),
-            metadata: nil,
-            error: nil,
-            responseTime: nil
-        )
-        return CustomValidators.validate(response: mockResponse, validatorName: validator)
     }
     
     /// Validates exact string match (case-insensitive, whitespace-trimmed)
@@ -565,60 +600,24 @@ class ResponseValidator {
     /// - Returns: ValidationResult with similarity score in details
     private func validateSemantic(response: BotResponse, expected: String, threshold: Double) -> ValidationResult {
         // Calculate semantic similarity using NaturalLanguage framework
+        // IMPORTANT: Only use the bot's response content, not concatenated with user input
         let similarity = calculateSemanticSimilarity(response.content, expected)
         let passed = similarity >= threshold
+        
+        // Debug logging for semantic similarity
+        print("DEBUG SEMANTIC: Expected: '\(expected)'")
+        print("DEBUG SEMANTIC: Actual: '\(response.content)'")
+        print("DEBUG SEMANTIC: Similarity: \(similarity)")
+        print("DEBUG SEMANTIC: Threshold: \(threshold)")
+        print("DEBUG SEMANTIC: Passed: \(passed)")
         
         return ValidationResult(
             passed: passed,
             expected: expected,
             actual: response.content,
-            message: passed ? "Semantic similarity above threshold" : "Semantic similarity below threshold",
+            message: passed ? "Semantic similarity above threshold (\(String(format: "%.3f", similarity)))" : "Semantic similarity below threshold (\(String(format: "%.3f", similarity)))",
             details: ["similarity": String(format: "%.3f", similarity), "threshold": String(threshold)]
         )
-    }
-    
-    /// Calculates semantic similarity between two texts
-    /// Uses NaturalLanguage word embeddings for vector comparison
-    /// Falls back to simple word overlap if embeddings unavailable
-    /// - Parameters:
-    ///   - text1: First text
-    ///   - text2: Second text
-    /// - Returns: Similarity score (0.0-1.0)
-    private func calculateSemanticSimilarity(_ text1: String, _ text2: String) -> Double {
-        // Try to use NaturalLanguage framework for semantic analysis
-        let embedding = NLEmbedding.wordEmbedding(for: .english)
-        
-        // Get word embedding vectors for both texts
-        guard let vector1 = embedding?.vector(for: text1.lowercased()),
-              let vector2 = embedding?.vector(for: text2.lowercased()) else {
-            // Fallback to simple word overlap if embeddings not available
-            return calculateSimpleSimilarity(text1, text2)
-        }
-        
-        // Calculate cosine similarity between vectors
-        // Cosine similarity measures angle between vectors (0 = orthogonal, 1 = same direction)
-        var dotProduct: Double = 0
-        var magnitude1: Double = 0
-        var magnitude2: Double = 0
-        
-        for i in 0..<min(vector1.count, vector2.count) {
-            dotProduct += Double(vector1[i]) * Double(vector2[i])
-            magnitude1 += Double(vector1[i]) * Double(vector1[i])
-            magnitude2 += Double(vector2[i]) * Double(vector2[i])
-        }
-        
-        magnitude1 = sqrt(magnitude1)
-        magnitude2 = sqrt(magnitude2)
-        
-        // Check for zero vectors
-        guard magnitude1 > 0 && magnitude2 > 0 else {
-            return calculateSimpleSimilarity(text1, text2)
-        }
-        
-        let cosineSimilarity = dotProduct / (magnitude1 * magnitude2)
-        
-        // Normalize to 0-1 range (cosine similarity ranges from -1 to 1)
-        return (cosineSimilarity + 1) / 2
     }
     
     /// Validates using custom validator by name
@@ -633,6 +632,20 @@ class ResponseValidator {
         return result
     }
     
+    /// Validates exact text in conversation
+    private func validateExactInText(text: String, expected: String) -> ValidationResult {
+        let passed = text.lowercased().contains(expected.lowercased())
+        
+        return ValidationResult(
+            passed: passed,
+            expected: expected,
+            actual: text,
+            message: passed ? "Expected text found in conversation" : "Expected text not found in conversation",
+            details: nil
+        )
+    }
+    
+    /// Validates pattern in conversation text
     private func validatePatternInText(text: String, pattern: String) -> ValidationResult {
         do {
             let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
@@ -659,6 +672,7 @@ class ResponseValidator {
         }
     }
     
+    /// Validates semantic similarity in conversation text
     private func validateSemanticInText(text: String, expected: String, threshold: Double) -> ValidationResult {
         let similarity = calculateSemanticSimilarity(text, expected)
         let passed = similarity >= threshold
@@ -672,6 +686,166 @@ class ResponseValidator {
         )
     }
     
+    /// Validates custom validator in conversation text
+    private func validateCustomInText(text: String, validator: String) -> ValidationResult {
+        // Create a mock response for custom validation
+        let mockResponse = BotResponse(
+            content: text,
+            timestamp: Date(),
+            metadata: nil,
+            error: nil,
+            responseTime: nil
+        )
+        return CustomValidators.validate(response: mockResponse, validatorName: validator)
+    }
+    
+    /// Calculates semantic similarity between two texts
+    /// Uses NaturalLanguage word embeddings for vector comparison
+    /// Falls back to simple word overlap if embeddings unavailable
+    /// - Parameters:
+    ///   - text1: First text
+    ///   - text2: Second text
+    /// - Returns: Similarity score (0.0-1.0)
+    private func calculateSemanticSimilarity(_ text1: String, _ text2: String) -> Double {
+        // Debug logging
+        print("DEBUG SIMILARITY: Text1: '\(text1)'")
+        print("DEBUG SIMILARITY: Text2: '\(text2)'")
+        
+        // Try to use NaturalLanguage framework for semantic analysis
+        guard let embedding = NLEmbedding.wordEmbedding(for: .english) else {
+            print("DEBUG SIMILARITY: Embedding not available, using fallback")
+            return calculateSimpleSimilarity(text1, text2)
+        }
+        
+        print("DEBUG SIMILARITY: Embedding available: true")
+        
+        // Clean and normalize text for better embedding results
+        let cleanText1 = text1.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanText2 = text2.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // For short texts, try word-by-word embedding instead of full text
+        // This works better for single words or short phrases
+        if cleanText2.split(separator: " ").count <= 3 {
+            return calculateWordBasedSimilarity(cleanText1, cleanText2, embedding: embedding)
+        }
+        
+        // Get word embedding vectors for both texts
+        guard let vector1 = embedding.vector(for: cleanText1),
+              let vector2 = embedding.vector(for: cleanText2),
+              vector1.count > 0 && vector2.count > 0 else {
+            // Fallback to simple word overlap if embeddings not available
+            print("DEBUG SIMILARITY: Using fallback simple similarity (embeddings failed)")
+            return calculateSimpleSimilarity(text1, text2)
+        }
+        
+        print("DEBUG SIMILARITY: Using NaturalLanguage embeddings")
+        print("DEBUG SIMILARITY: Vector1 length: \(vector1.count)")
+        print("DEBUG SIMILARITY: Vector2 length: \(vector2.count)")
+        
+        // Calculate cosine similarity between vectors
+        // Cosine similarity measures angle between vectors (0 = orthogonal, 1 = same direction)
+        var dotProduct: Double = 0
+        var magnitude1: Double = 0
+        var magnitude2: Double = 0
+        
+        for i in 0..<min(vector1.count, vector2.count) {
+            dotProduct += Double(vector1[i]) * Double(vector2[i])
+            magnitude1 += Double(vector1[i]) * Double(vector1[i])
+            magnitude2 += Double(vector2[i]) * Double(vector2[i])
+        }
+        
+        magnitude1 = sqrt(magnitude1)
+        magnitude2 = sqrt(magnitude2)
+        
+        print("DEBUG SIMILARITY: Dot product: \(dotProduct)")
+        print("DEBUG SIMILARITY: Magnitude1: \(magnitude1)")
+        print("DEBUG SIMILARITY: Magnitude2: \(magnitude2)")
+        
+        // Check for zero vectors
+        guard magnitude1 > 0 && magnitude2 > 0 else {
+            print("DEBUG SIMILARITY: Zero vector detected, using fallback")
+            return calculateSimpleSimilarity(text1, text2)
+        }
+        
+        let cosineSimilarity = dotProduct / (magnitude1 * magnitude2)
+        print("DEBUG SIMILARITY: Cosine similarity: \(cosineSimilarity)")
+        
+        // Normalize to 0-1 range (cosine similarity ranges from -1 to 1)
+        let normalizedSimilarity = (cosineSimilarity + 1) / 2
+        print("DEBUG SIMILARITY: Normalized similarity: \(normalizedSimilarity)")
+        
+        return normalizedSimilarity
+    }
+    
+    /// Calculates similarity using word-by-word embeddings
+    /// Better for short expected texts like single words
+    /// - Parameters:
+    ///   - text1: Longer text (bot response)
+    ///   - text2: Shorter text (expected)
+    ///   - embedding: NaturalLanguage embedding
+    /// - Returns: Maximum similarity found
+    private func calculateWordBasedSimilarity(_ text1: String, _ text2: String, embedding: NLEmbedding) -> Double {
+        print("DEBUG SIMILARITY: Using word-based similarity for short expected text")
+        
+        // Split both texts into words
+        let words1 = text1.split(separator: " ").map { String($0).lowercased() }
+        let words2 = text2.split(separator: " ").map { String($0).lowercased() }
+        
+        var maxSimilarity: Double = 0
+        
+        // For each word in expected text, find best match in response
+        for expectedWord in words2 {
+            var bestWordSimilarity: Double = 0
+            
+            for responseWord in words1 {
+                // Try exact match first
+                if expectedWord == responseWord {
+                    bestWordSimilarity = 1.0
+                    break
+                }
+                
+                // Try embedding similarity
+                if let vec1 = embedding.vector(for: expectedWord),
+                   let vec2 = embedding.vector(for: responseWord),
+                   vec1.count > 0 && vec2.count > 0 {
+                    
+                    let similarity = calculateCosineSimilarity(vec1, vec2)
+                    bestWordSimilarity = max(bestWordSimilarity, similarity)
+                }
+            }
+            
+            maxSimilarity = max(maxSimilarity, bestWordSimilarity)
+        }
+        
+        print("DEBUG SIMILARITY: Word-based max similarity: \(maxSimilarity)")
+        return maxSimilarity
+    }
+    
+    /// Calculates cosine similarity between two vectors
+    /// - Parameters:
+    ///   - vec1: First vector
+    ///   - vec2: Second vector
+    /// - Returns: Cosine similarity (0.0-1.0)
+    private func calculateCosineSimilarity(_ vec1: [Double], _ vec2: [Double]) -> Double {
+        var dotProduct: Double = 0
+        var magnitude1: Double = 0
+        var magnitude2: Double = 0
+        
+        for i in 0..<min(vec1.count, vec2.count) {
+            dotProduct += vec1[i] * vec2[i]
+            magnitude1 += vec1[i] * vec1[i]
+            magnitude2 += vec2[i] * vec2[i]
+        }
+        
+        magnitude1 = sqrt(magnitude1)
+        magnitude2 = sqrt(magnitude2)
+        
+        guard magnitude1 > 0 && magnitude2 > 0 else { return 0.0 }
+        
+        let cosineSimilarity = dotProduct / (magnitude1 * magnitude2)
+        return (cosineSimilarity + 1) / 2 // Normalize to 0-1
+    }
+    
     /// Calculates simple word overlap similarity (Jaccard index)
     /// Fallback when NaturalLanguage embeddings unavailable
     /// - Parameters:
@@ -679,18 +853,122 @@ class ResponseValidator {
     ///   - text2: Second text
     /// - Returns: Jaccard similarity (0.0-1.0)
     private func calculateSimpleSimilarity(_ text1: String, _ text2: String) -> Double {
-        // Split texts into words, removing punctuation
+        // Split texts into words, removing punctuation and common stop words
         let separators = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
-        let words1 = Set(text1.lowercased().components(separatedBy: separators).filter { !$0.isEmpty })
-        let words2 = Set(text2.lowercased().components(separatedBy: separators).filter { !$0.isEmpty })
+        let words1 = Set(text1.lowercased().components(separatedBy: separators).filter { !$0.isEmpty && $0.count > 1 })
+        let words2 = Set(text2.lowercased().components(separatedBy: separators).filter { !$0.isEmpty && $0.count > 1 })
+        
+        print("DEBUG SIMPLE SIMILARITY: Words1: \(Array(words1).sorted())")
+        print("DEBUG SIMPLE SIMILARITY: Words2: \(Array(words2).sorted())")
         
         // Calculate Jaccard similarity: |intersection| / |union|
         let intersection = words1.intersection(words2)
         let union = words1.union(words2)
         
-        guard !union.isEmpty else { return 0.0 }
+        print("DEBUG SIMPLE SIMILARITY: Intersection: \(Array(intersection).sorted())")
+        print("DEBUG SIMPLE SIMILARITY: Union: \(Array(union).sorted())")
+        print("DEBUG SIMPLE SIMILARITY: Intersection count: \(intersection.count)")
+        print("DEBUG SIMPLE SIMILARITY: Union count: \(union.count)")
         
-        return Double(intersection.count) / Double(union.count)
+        guard !union.isEmpty else { 
+            print("DEBUG SIMPLE SIMILARITY: Empty union, returning 0.0")
+            return 0.0 
+        }
+        
+        let jaccardSimilarity = Double(intersection.count) / Double(union.count)
+        
+        // For semantic similarity, we want to be more lenient
+        // Check for partial word matches and semantic relationships
+        var semanticMatches = 0
+        
+        for word2 in words2 {
+            var foundMatch = false
+            
+            // Check for exact matches (already counted in Jaccard)
+            if words1.contains(word2) {
+                foundMatch = true
+            }
+            
+            // Check for partial matches (common prefixes/suffixes)
+            if !foundMatch && word2.count >= 3 {
+                for word1 in words1 {
+                    if word1.count >= 3 {
+                        // Check for common prefixes (at least 3 characters)
+                        if word1.hasPrefix(String(word2.prefix(3))) || word2.hasPrefix(String(word1.prefix(3))) {
+                            semanticMatches += 1
+                            foundMatch = true
+                            break
+                        }
+                        
+                        // Check for common suffixes (at least 3 characters)
+                        if word1.hasSuffix(String(word2.suffix(3))) || word2.hasSuffix(String(word1.suffix(3))) {
+                            semanticMatches += 1
+                            foundMatch = true
+                            break
+                        }
+                        
+                        // Check for substring matches (one word contains the other)
+                        if word1.contains(word2) || word2.contains(word1) {
+                            semanticMatches += 1
+                            foundMatch = true
+                            break
+                        }
+                    }
+                }
+            }
+            
+            // Check for common semantic relationships
+            if !foundMatch {
+                semanticMatches += checkSemanticRelationship(word1: word2, words: words1)
+            }
+        }
+        
+        // Calculate semantic similarity as a bonus to Jaccard
+        let semanticBonus = Double(semanticMatches) / Double(words2.count) * 0.3 // Weight semantic matches less
+        let finalSimilarity = min(1.0, jaccardSimilarity + semanticBonus)
+        
+        print("DEBUG SIMPLE SIMILARITY: Jaccard similarity: \(jaccardSimilarity)")
+        print("DEBUG SIMPLE SIMILARITY: Semantic matches: \(semanticMatches)")
+        print("DEBUG SIMPLE SIMILARITY: Semantic bonus: \(semanticBonus)")
+        print("DEBUG SIMPLE SIMILARITY: Final similarity: \(finalSimilarity)")
+        
+        return finalSimilarity
+    }
+    
+    /// Checks for semantic relationships between words
+    /// - Parameters:
+    ///   - word1: Word to check
+    ///   - words: Set of words to check against
+    /// - Returns: Number of semantic matches found (0 or 1)
+    private func checkSemanticRelationship(word1: String, words: Set<String>) -> Int {
+        // Define some common semantic relationships
+        let semanticGroups: [Set<String>] = [
+            ["hello", "hi", "hey", "greetings", "greeting", "welcome"],
+            ["goodbye", "bye", "farewell", "see", "later"],
+            ["yes", "yeah", "yep", "sure", "ok", "okay", "fine"],
+            ["no", "nope", "not", "never"],
+            ["help", "assist", "support", "aid"],
+            ["thanks", "thank", "appreciate", "grateful"],
+            ["sorry", "apologize", "excuse", "pardon"],
+            ["good", "great", "excellent", "wonderful", "nice", "awesome"],
+            ["bad", "terrible", "awful", "horrible", "poor"],
+            ["big", "large", "huge", "enormous", "giant"],
+            ["small", "little", "tiny", "mini", "miniature"]
+        ]
+        
+        // Check if word1 belongs to any semantic group
+        for group in semanticGroups {
+            if group.contains(word1) {
+                // Check if any word in the response belongs to the same group
+                for word in words {
+                    if group.contains(word) && word != word1 {
+                        return 1
+                    }
+                }
+            }
+        }
+        
+        return 0
     }
 }
 
@@ -722,4 +1000,3 @@ enum TestError: Error, LocalizedError {
         }
     }
 }
-

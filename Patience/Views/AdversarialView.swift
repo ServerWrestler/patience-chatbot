@@ -502,7 +502,8 @@ struct AdversarialConfigEditorView: View {
                                 Text("No goals added yet.")
                                     .foregroundColor(.secondary)
                             } else {
-                                ForEach(goals.indices, id: \.self) { index in
+                                // Use enumerated() to create stable index-value pairs for SwiftUI
+                                ForEach(Array(goals.enumerated()), id: \.offset) { index, _ in
                                     HStack(spacing: 8) {
                                         TextField("Goal", text: $goals[index])
                                             .textFieldStyle(.roundedBorder)

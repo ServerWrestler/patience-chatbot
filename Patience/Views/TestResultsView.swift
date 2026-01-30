@@ -7,15 +7,13 @@ struct TestResultsView: View {
     @State private var searchText = ""
     
     var filteredResults: [TestResults] {
-        if searchText.isEmpty {
-            return appState.testResults
-        } else {
-            return appState.testResults.filter { result in
-                result.scenarioResults.contains { scenario in
-                    scenario.scenarioName.localizedCaseInsensitiveContains(searchText)
-                }
+        let results = searchText.isEmpty ? appState.testResults : appState.testResults.filter { result in
+            result.scenarioResults.contains { scenario in
+                scenario.scenarioName.localizedCaseInsensitiveContains(searchText)
             }
         }
+        // Sort by start time descending (most recent first)
+        return results.sorted(by: { $0.startTime > $1.startTime })
     }
     
     var body: some View {

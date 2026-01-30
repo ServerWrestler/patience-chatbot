@@ -86,6 +86,15 @@ These validate the **entire conversation** after all steps complete.
    - Click **"Add Expected Response"**
    - Enter the expected text or pattern
    - Select the validation type
+   - **For Semantic validation**: Set the threshold using the slider that appears
+
+### Adding Expected Outcomes
+
+1. Click **"Add Outcome"** in the Expected Outcomes section
+2. Enter the expected outcome description
+3. Select the validation type
+4. **For Semantic validation**: Set the threshold using the slider that appears
+5. Optionally add a description explaining what this outcome tests
 
 ---
 
@@ -139,7 +148,8 @@ Uses AI to compare the meaning of the response to the expected text.
 
 **How it works**: Patience uses Apple's NaturalLanguage framework to compare meanings, not exact words.
 
-**Threshold**: Set between 0.0 and 1.0
+**Setting the Threshold**: When you select "Semantic" as the validation type, a threshold slider appears below it.
+- Set between 0.0 and 1.0
 - 0.8 = Requires 80% semantic similarity (recommended)
 - 0.9 = Very strict, nearly identical meaning required
 - 0.6 = Loose matching, general topic similarity
@@ -150,22 +160,6 @@ Uses AI to compare the meaning of the response to the expected text.
 Uses custom validation logic you define.
 
 **Best for**: Complex validation rules not covered by other types
-
----
-
-## Default Validation Type
-
-In the main configuration, you'll see a **Validation** section with **Default Type**.
-
-**Purpose**: This sets the fallback validation type used when a conversation step doesn't specify its own type.
-
-**Example**:
-- Default Type: Pattern
-- Step 1: No validation type specified → Uses Pattern
-- Step 2: Explicitly set to Semantic → Uses Semantic
-- Step 3: No validation type specified → Uses Pattern
-
-This saves time when most of your validations use the same type.
 
 ---
 
@@ -263,7 +257,10 @@ Each validation shows:
 1. **Use Pattern for Flexibility**: Most responses vary slightly
 2. **Use Exact for Critical Messages**: Error messages, confirmations
 3. **Use Semantic for Natural Language**: Open-ended responses
-4. **Set Appropriate Thresholds**: Start at 0.8, adjust as needed
+4. **Set Individual Thresholds**: Each semantic validation can have its own threshold
+   - Strict validations (greetings): 0.9
+   - Moderate validations (help responses): 0.7-0.8
+   - Flexible validations (open-ended): 0.6
 
 ### Timing Considerations
 
@@ -305,13 +302,13 @@ Each validation shows:
 
 **Causes**:
 - Pattern doesn't match response format
-- Semantic threshold too high
+- Semantic threshold too high for the specific validation
 - Bot response changed
 
 **Solutions**:
 1. Review actual response in results
 2. Adjust pattern or expected text
-3. Lower semantic threshold
+3. Lower semantic threshold for that specific validation
 4. Update test to match new bot behavior
 
 ### "Authentication Failed"
@@ -471,8 +468,7 @@ Exported configurations use this JSON structure:
     }
   ],
   "validation": {
-    "defaultType": "pattern",
-    "semanticSimilarityThreshold": 0.8
+    "defaultType": "pattern"
   },
   "timing": {
     "enableDelays": true,
