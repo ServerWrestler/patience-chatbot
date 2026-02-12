@@ -404,12 +404,10 @@ struct TestResultSummaryRow: View {
     }
     
     /// Creates a meaningful display name for the test result
-    /// Uses bot name from scenario results if available, otherwise falls back to "Test Run"
+    /// Uses scenario name from first result if available
     private var resultDisplayName: String {
-        // Try to get bot name from the first scenario result
-        if let firstScenario = result.scenarioResults.first,
-           let firstMessage = firstScenario.conversationHistory.messages.first(where: { $0.sender == .target }) {
-            // Extract a short identifier from the conversation
+        // Try to get scenario name from the first scenario result
+        if let firstScenario = result.scenarioResults.first {
             return "Test: \(firstScenario.scenarioName)"
         }
         
