@@ -1,407 +1,115 @@
 # AI Assistant Development Guide
 
-This guide helps developers using ChatGPT, Claude, or other AI assistants to work effectively on the Patience project.
+Quick reference for AI assistants (ChatGPT, Claude, etc.) working on Patience.
 
-## 📋 Quick Context for AI Assistants
+## Project Context
 
-Copy and paste this section when starting a new conversation with an AI assistant:
-
----
-
-**Project**: Patience - macOS Chatbot Testing Framework
-**Language**: Swift 5.9+
-**Framework**: SwiftUI
-**Platform**: macOS 12.0+
-
-**Purpose**: Native macOS application for testing chatbot resilience and performance with three modes:
-1. Live Testing - Real-time scenario-based testing
-2. Log Analysis - Historical conversation analysis
-3. Adversarial Testing - AI-powered automated testing
-
-**Architecture**:
-- MVVM pattern with SwiftUI
-- AppState (@MainActor, ObservableObject) for state management
-- Async/await for concurrency
-- Codable + Sendable for all data types
-- UserDefaults for persistence, Keychain for API keys
-
-**Key Components**:
-- `Models/` - Data structures (must be Codable, Sendable)
-- `Core/` - Business logic (TestExecutor, AnalysisEngine, AdversarialTestOrchestrator)
-- `Views/` - SwiftUI views (suffix with "View")
-
-**Naming Conventions**:
-- Files: PascalCase (e.g., `TestExecutor.swift`)
-- Views: Suffix with "View" (e.g., `TestingView`)
-- Models: Descriptive nouns (e.g., `TestConfig`)
-
-**Important Rules**:
-- All async functions must handle errors with try/catch
-- Show user-facing errors via `appState.showErrorMessage()`
-- Mark UI code with @MainActor
-- Use @Published for state that triggers UI updates
-- Never store API keys in configs (use Keychain)
-- **ALL code must have clear, well-written comments** (see Code Documentation Standards below)
-
----
-
-## 🎯 Common Development Tasks
-
-### Adding a New Feature
-
-**Context to provide**:
 ```
-I'm adding [feature name] to Patience. 
-
-Current implementation: [describe current state]
-Desired behavior: [describe what you want]
-
-Relevant files:
-- [list files that might be affected]
-
-Please help me implement this following the project's patterns.
+Project: Patience - macOS Chatbot Testing Framework
+Language: Swift 5.9+ / SwiftUI
+Platform: macOS 13.0+
+Pattern: MVVM with async/await
 ```
 
-### Fixing a Bug
+## Key Files
 
-**Context to provide**:
-```
-I'm fixing a bug in Patience where [describe bug].
+| Category | Files |
+|----------|-------|
+| **State** | `Models/AppState.swift`, `Models/Types.swift` |
+| **Core Logic** | `Core/TestExecutor.swift`, `Core/AdversarialTestOrchestrator.swift`, `Core/AnalysisEngine.swift` |
+| **Views** | `Views/TestingView.swift`, `Views/AdversarialView.swift`, `Views/AnalysisView.swift` |
 
-Error message: [paste error]
-Affected file: [file path]
-Current code: [paste relevant code]
+## Critical Rules
 
-Please help me fix this while maintaining the project's architecture.
-```
+1. All types: `Codable` + `Sendable`
+2. UI code: `@MainActor`
+3. State changes: Call `saveConfigs()` after
+4. API keys: Keychain only, never in configs
+5. Errors: Show via `appState.showErrorMessage()`
+6. Comments: Required on all code (see below)
 
-### Adding a New View
+## Code Patterns
 
-**Context to provide**:
-```
-I'm creating a new view called [ViewName] in Patience.
-
-Purpose: [what the view does]
-Data needed: [what data it displays/modifies]
-Parent view: [where it's used]
-
-Please create a SwiftUI view following the project's patterns:
-- Use @EnvironmentObject for AppState
-- Follow MVVM pattern
-- Include proper error handling
-```
-
-### Adding a New Model
-
-**Context to provide**:
-```
-I'm adding a new data model to Patience.
-
-Model name: [name]
-Purpose: [what it represents]
-Fields: [list fields and types]
-
-Please create a model that is:
-- Codable (for persistence)
-- Sendable (for concurrency)
-- Identifiable (if used in lists)
-- Follows project naming conventions
-```
-
-## 📚 Reference Documentation
-
-### Key Files to Reference
-
-When asking for help, mention these files if relevant:
-
-**Core Logic**:
-- `Patience/Core/TestExecutor.swift` - Live test execution
-- `Patience/Core/AnalysisEngine.swift` - Log analysis
-- `Patience/Core/AdversarialTestOrchestrator.swift` - AI testing
-- `Patience/Core/ReportGenerator.swift` - Report generation
-- `Patience/Core/CustomValidators.swift` - Validation rules
-
-**Models**:
-- `Patience/Models/AppState.swift` - Application state
-- `Patience/Models/Types.swift` - All data structures
-
-**Views**:
-- `Patience/Views/TestingView.swift` - Live testing UI
-- `Patience/Views/AnalysisView.swift` - Log analysis UI
-- `Patience/Views/AdversarialView.swift` - Adversarial testing UI
-- `Patience/Views/ReportsView.swift` - Reports UI
-
-### Documentation Files
-
-Share these with AI assistants for context:
-- `README.md` - Project overview and features
-- `DOCUMENTATION.md` - Comprehensive feature documentation
-- `CHANGELOG.md` - Version history
-- `SECURITY.md` - Security policies and vulnerability reporting
-
-## 🔧 Development Patterns
-
-### Pattern 1: Adding a New Test Type
-
+### Adding a Model
 ```swift
-// 1. Add enum case to Types.swift
-enum TestType: String, Codable, CaseIterable, Sendable {
-    case existing = "existing"
-    case newType = "newType"  // Add this
-}
-
-// 2. Add configuration to Types.swift
-struct NewTestConfig: Codable, Identifiable, Sendable {
+struct NewConfig: Codable, Identifiable, Sendable {
     var id: UUID = UUID()
-    // Add fields
+    // fields...
 }
+```
 
-// 3. Add to AppState.swift
-@Published var newTestConfigs: [NewTestConfig] = []
+### Adding to AppState
+```swift
+@Published var newConfigs: [NewConfig] = []
 
-// 4. Add CRUD methods to AppState.swift
-func addNewTestConfig(_ config: NewTestConfig) { }
-func updateNewTestConfig(_ config: NewTestConfig) { }
-func deleteNewTestConfig(_ config: NewTestConfig) { }
-
-// 5. Create executor in Core/
-class NewTestExecutor {
-    func execute(config: NewTestConfig) async throws -> Results { }
+func addNewConfig(_ config: NewConfig) {
+    newConfigs.append(config)
+    saveConfigs()
 }
+```
 
-// 6. Create view in Views/
-struct NewTestView: View {
+### Async Operations
+```swift
+@MainActor
+func runOperation() async {
+    isRunning = true
+    do {
+        let result = try await executor.execute()
+        results.append(result)
+    } catch {
+        showErrorMessage(error.localizedDescription)
+    }
+    isRunning = false
+}
+```
+
+### SwiftUI View
+```swift
+struct NewView: View {
     @EnvironmentObject var appState: AppState
-    var body: some View { }
-}
-```
-
-### Pattern 2: Adding Validation
-
-```swift
-// 1. Add to CustomValidators.swift
-static func validateNewRule(_ response: BotResponse) -> ValidationResult {
-    // Implementation
-    return ValidationResult(
-        passed: passed,
-        expected: "Expected behavior",
-        actual: response.content,
-        message: "Validation message",
-        details: ["key": "value"]
-    )
-}
-
-// 2. Add case to validate() switch
-case "new_rule":
-    return validateNewRule(response)
-```
-
-### Pattern 3: Adding AI Provider
-
-```swift
-// 1. Add to BotProvider enum in Types.swift
-enum BotProvider: String, Codable, CaseIterable, Sendable {
-    case newProvider = "newProvider"
-}
-
-// 2. Create connector in AdversarialTestOrchestrator.swift
-class NewProviderConnector: AdversarialBotConnector {
-    func initialize(config: AdversarialBotSettings) async throws { }
-    func generateMessage(...) async throws -> String { }
-    func shouldEndConversation(...) async throws -> Bool { }
-    func disconnect() async { }
-    func getName() -> String { return "New Provider" }
-}
-
-// 3. Add to createConnector() switch
-case .newProvider:
-    return NewProviderConnector()
-```
-
-## 🐛 Common Issues and Solutions
-
-### Issue: "Type does not conform to Sendable"
-**Solution**: Add `Sendable` to the type declaration
-```swift
-struct MyType: Codable, Sendable { }
-```
-
-### Issue: "Publishing changes from background threads"
-**Solution**: Mark function with `@MainActor` or wrap in `MainActor.run`
-```swift
-@MainActor
-func updateUI() { }
-
-// Or
-Task { @MainActor in
-    self.property = value
-}
-```
-
-### Issue: "Cannot find type in scope"
-**Solution**: Import the module or check file is in Xcode project
-```swift
-import Foundation
-import NaturalLanguage
-```
-
-### Issue: Configuration not persisting
-**Solution**: Ensure type is Codable and saveConfigs() is called
-```swift
-struct Config: Codable { }
-
-func addConfig(_ config: Config) {
-    configs.append(config)
-    saveConfigs()  // Don't forget this!
-}
-```
-
-### Issue: "Cannot find [ClassName] in scope"
-**Solution**: Ensure the file is added to the Xcode project
-1. Check the file exists in the filesystem
-2. Verify it's listed in `Patience.xcodeproj/project.pbxproj`
-3. Confirm it's in the Sources build phase
-4. Clean build folder (`⌘+Shift+K`) and rebuild
-
-### Issue: Duplicate property/extension errors
-**Solution**: Check for conflicting property declarations
-- Stored properties and computed properties can't have the same name
-- Extensions can't redeclare existing properties
-- Remove duplicate or conflicting declarations
-
-## 📝 Code Documentation Standards
-
-**ALL code must include clear, well-written comments:**
-
-### File-Level Comments
-- Start each file with a comment explaining its purpose
-- List main types/classes defined in the file
-- Explain how it fits into the overall architecture
-
-### Type/Class Comments
-- Document what the type represents
-- Explain its role in the application
-- Note any important protocols it conforms to
-
-### Function Comments
-- Explain what the function does (not just how)
-- Document parameters and return values
-- Note any side effects or state changes
-- Explain error conditions
-
-### Property Comments
-- Document non-obvious properties
-- Explain @State, @Published, @EnvironmentObject usage
-- Note default values and their significance
-
-### Example:
-```swift
-/// Manages the application's global state
-/// Contains all test configurations, results, and user settings
-/// Marked with @MainActor to ensure all UI updates happen on main thread
-@MainActor
-class AppState: ObservableObject {
-    /// Array of test configurations created by the user
-    /// @Published triggers UI updates when this changes
-    /// Persisted to UserDefaults via saveConfigs()
-    @Published var testConfigs: [TestConfig] = []
     
-    /// Saves all configurations to persistent storage
-    /// Called automatically after any config changes
-    /// Uses UserDefaults for configs, Keychain for API keys
-    func saveConfigs() {
-        // Implementation...
+    var body: some View {
+        // UI...
     }
 }
 ```
 
-## 📝 Code Review Checklist
+## Code Documentation Standards
 
-When asking AI to review code, request checks for:
+All code requires clear comments:
 
-- [ ] All types are Codable and Sendable
-- [ ] UI updates are on @MainActor
-- [ ] Errors are caught and shown to user
-- [ ] API keys never stored in configs
-- [ ] Async functions use proper error handling
-- [ ] State changes call saveConfigs()
-- [ ] Views use @EnvironmentObject for AppState
-- [ ] Naming follows conventions
-- [ ] No force unwraps (use guard/if let)
-- [ ] Proper memory management (no retain cycles)
-- [ ] Clear, well-written comments for all code (see Code Documentation Standards)
-
-## 🚀 Testing Prompts
-
-### For ChatGPT/Claude
-
-**Unit Test Generation**:
-```
-Generate unit tests for [function name] in Patience.
-
-Function:
-[paste function code]
-
-Test cases needed:
-- Happy path
-- Error cases
-- Edge cases
-- Async behavior
-
-Use XCTest framework and follow Swift testing best practices.
+```swift
+/// Manages application state
+/// @MainActor ensures UI updates on main thread
+@MainActor
+class AppState: ObservableObject {
+    /// Test configurations, persisted to UserDefaults
+    @Published var testConfigs: [TestConfig] = []
+    
+    /// Saves all configs to persistent storage
+    /// Called after any config modification
+    func saveConfigs() {
+        // implementation
+    }
+}
 ```
 
-**Code Review**:
-```
-Review this code from Patience for:
-- Swift best practices
-- SwiftUI patterns
-- Concurrency safety
-- Error handling
-- Memory leaks
+**Comment requirements:**
+- File purpose at top
+- Doc comments on types and public functions
+- Explain `@State`, `@Published`, `@EnvironmentObject` usage
+- Note side effects and error conditions
 
-Code:
-[paste code]
-```
+## Common Issues
 
-**Refactoring**:
-```
-Refactor this code from Patience to:
-- Improve readability
-- Follow MVVM pattern
-- Use async/await properly
-- Add error handling
+| Issue | Solution |
+|-------|----------|
+| "Type does not conform to Sendable" | Add `Sendable` to type |
+| "Publishing changes from background" | Add `@MainActor` or use `MainActor.run` |
+| Config not persisting | Call `saveConfigs()` after changes |
 
-Current code:
-[paste code]
-```
+## Related Docs
 
-## 🔗 Useful Resources
-
-- [Swift Documentation](https://swift.org/documentation/)
-- [SwiftUI Tutorials](https://developer.apple.com/tutorials/swiftui)
-- [Swift Concurrency](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html)
-- [Keychain Services](https://developer.apple.com/documentation/security/keychain_services)
-
-## 💡 Tips for AI-Assisted Development
-
-1. **Be Specific**: Provide exact file paths and function names
-2. **Share Context**: Include relevant code snippets
-3. **Mention Patterns**: Reference the project's architecture
-4. **Request Tests**: Ask for test cases with implementations
-5. **Iterate**: Start simple, then add complexity
-6. **Verify**: Always test AI-generated code in Xcode
-
-## 📞 Getting Help
-
-If AI assistants can't help:
-1. Check `DOCUMENTATION.md` for feature details
-2. Look at similar implementations in the codebase
-3. Open an issue on GitHub with specific questions
-
-## Documentation Guidelines
-
-- Do not add "Last Updated" dates to documentation files
-- Git tracks all changes and dates automatically
-- Focus on content quality over manual date tracking
-
+- [README.md](README.md) - Features and setup
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [DOCUMENTATION.md](DOCUMENTATION.md) - Doc index
