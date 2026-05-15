@@ -1,4 +1,8 @@
-<img src="docs/assets/patience.png" alt="Patience — --mode=adversarial --verbose" width="600" />
+```
+PATIENCE
+────────────────────────────────────────
+automated red teaming · compliance validation
+```
 
 Automated red teaming and compliance validation for AI chatbots — purpose-built for regulated industries.
 
