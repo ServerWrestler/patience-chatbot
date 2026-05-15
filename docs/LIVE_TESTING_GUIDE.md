@@ -112,4 +112,4 @@ Enter the expected meaning in plain English. Set threshold (0.0-1.0):
 ## Related Guides
 
 - [Adversarial Testing Guide](ADVERSARIAL_TESTING_GUIDE.md) - AI-powered testing
-- [Log Analysis Guide](LOG_ANALYSIS_GUIDE.md) - Historical analysis (planned)
+- [Log Analysis Guide](CONVERSATION_FORENSICS_GUIDE.md) - Historical analysis

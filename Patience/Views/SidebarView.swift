@@ -45,7 +45,7 @@ struct SidebarView: View {
             }
             
             Section("Analysis") {
-                Label("Log Analysis", systemImage: TabSelection.analysis.icon)
+                Label("Conversation Forensics", systemImage: TabSelection.analysis.icon)
                     .tag(SidebarSelection.tab(.analysis))
                 
                 Label("Reports", systemImage: TabSelection.reports.icon)

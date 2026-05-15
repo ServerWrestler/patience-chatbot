@@ -5,7 +5,7 @@ This guide provides structured adversarial testing prompts based on the OWASP To
 ## How to Use This Guide
 
 1. Select attack categories relevant to your chatbot's capabilities
-2. Copy example prompts or use them as templates for the AI tester
+2. Copy example prompts or use them as templates for the AI tester.  At the end of this document there is a single prompt with all examples combined.
 3. Configure appropriate severity thresholds
 4. Review results for vulnerabilities
 

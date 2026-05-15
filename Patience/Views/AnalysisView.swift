@@ -37,10 +37,10 @@ struct AnalysisView: View {
             // Header
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Log Analysis")
+                    Text("Conversation Forensics")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                    Text("Analyze historical chat logs and conversations")
+                    Text("Import and analyze historical chat logs to surface failure patterns and policy violations")
                         .foregroundColor(.secondary)
                 }
                 
@@ -121,7 +121,9 @@ struct AnalysisView: View {
                                     .padding()
                                 
                                 List(appState.analysisConfigs, selection: $selectedConfigId) { config in
-                                    AnalysisConfigRow(config: config)
+                                    AnalysisConfigRow(config: config, onEdit: {
+                                        editingState = .editing(config)
+                                    })
                                 }
                                 .listStyle(.sidebar)
                                 .frame(maxHeight: 200)
@@ -147,7 +149,9 @@ struct AnalysisView: View {
                     // Right: Analysis panel
                     VStack {
                         if let selectedId = selectedConfigId, let config = appState.analysisConfigs.first(where: { $0.id == selectedId }) {
-                            AnalysisExecutionPanel(config: config)
+                            AnalysisExecutionPanel(config: config, onEdit: {
+                                editingState = .editing(config)
+                            })
                         } else if let result = appState.analysisResults.first {
                             AnalysisResultDetailView(result: result)
                         } else {
@@ -271,6 +275,8 @@ struct AnalysisView: View {
 
 struct AnalysisConfigRow: View {
     let config: AnalysisConfig
+    /// Callback to trigger editing this config in the parent view
+    let onEdit: () -> Void
     @EnvironmentObject var appState: AppState
     
     var body: some View {
@@ -329,7 +335,7 @@ struct AnalysisConfigRow: View {
             }
             
             Button("Edit") {
-                // Edit configuration
+                onEdit()
             }
             
             Divider()
@@ -382,6 +388,8 @@ struct AnalysisResultRow: View {
 
 struct AnalysisExecutionPanel: View {
     let config: AnalysisConfig
+    /// Callback to trigger editing this config in the parent view
+    let onEdit: () -> Void
     @EnvironmentObject var appState: AppState
     
     var body: some View {
@@ -396,7 +404,7 @@ struct AnalysisExecutionPanel: View {
                     Spacer()
                     
                     Button("Edit") {
-                        // Edit configuration
+                        onEdit()
                     }
                     .buttonStyle(.bordered)
                 }
@@ -423,10 +431,11 @@ struct AnalysisExecutionPanel: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
-                        Button("Cancel") {
-                            // Cancel analysis
-                        }
-                        .buttonStyle(.bordered)
+                        // Cancel is not yet supported by AnalysisEngine (async task)
+                        // Shown as disabled to indicate the operation is in progress
+                        Button("Cancel") {}
+                            .buttonStyle(.bordered)
+                            .disabled(true)
                     }
                 } else {
                     Button("Run Analysis") {

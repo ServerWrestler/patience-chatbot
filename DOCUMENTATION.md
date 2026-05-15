@@ -16,7 +16,7 @@
 | [Live Testing](docs/LIVE_TESTING_GUIDE.md) | ✅ Implemented | Scenario-based chatbot testing |
 | [Adversarial Testing](docs/ADVERSARIAL_TESTING_GUIDE.md) | ✅ Implemented | AI-powered automated testing |
 | [Adversarial Prompts](docs/ADVERSARIAL_TESTING_PROMPTS.md) | ✅ Reference | OWASP/MITRE attack patterns |
-| [Log Analysis](docs/LOG_ANALYSIS_GUIDE.md) | ⚠️ Planned | Historical conversation analysis |
+| [Conversation Forensics](docs/CONVERSATION_FORENSICS_GUIDE.md) | ✅ Implemented | Historical conversation analysis and pattern detection |
 
 ## Architecture Overview
 
