@@ -8,7 +8,7 @@ Automated red teaming and compliance validation for AI chatbots — purpose-buil
 
 ## Three Testing Modes
 
-**Live Testing** — Script multi-turn conversation flows, validate responses against custom rules, catch regressions before production.
+**Scenario Testing** — Script multi-turn conversation flows, validate responses against custom rules, catch regressions before production.
 
 **Conversation Forensics** — Import production logs, surface failure patterns and policy violations, turn incidents into test cases.
 

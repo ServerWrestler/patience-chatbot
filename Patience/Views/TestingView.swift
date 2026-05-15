@@ -34,7 +34,7 @@ struct TestingView: View {
             // Header
             HStack {
                 VStack(alignment: .leading) {
-                    Text("Live Testing")
+                    Text("Scenario Testing")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                     Text("Run real-time tests against your chatbot")

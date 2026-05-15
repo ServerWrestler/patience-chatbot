@@ -13,7 +13,7 @@
 
 | Guide | Status | Description |
 |-------|--------|-------------|
-| [Live Testing](docs/LIVE_TESTING_GUIDE.md) | ✅ Implemented | Scenario-based chatbot testing |
+| [Scenario Testing](docs/SCENARIO_TESTING_GUIDE.md) | ✅ Implemented | Scenario-based chatbot testing |
 | [Adversarial Testing](docs/ADVERSARIAL_TESTING_GUIDE.md) | ✅ Implemented | AI-powered automated testing |
 | [Adversarial Prompts](docs/ADVERSARIAL_TESTING_PROMPTS.md) | ✅ Reference | OWASP/MITRE attack patterns |
 | [Conversation Forensics](docs/CONVERSATION_FORENSICS_GUIDE.md) | ✅ Implemented | Historical conversation analysis and pattern detection |
@@ -41,4 +41,3 @@ For detailed architecture and development patterns, see [AI_ASSISTANT_GUIDE.md](
 ## Support
 
 - [GitHub Issues](https://github.com/ServerWrestler/patience-chatbot/issues)
-- [GitHub Discussions](https://github.com/ServerWrestler/patience-chatbot/discussions)

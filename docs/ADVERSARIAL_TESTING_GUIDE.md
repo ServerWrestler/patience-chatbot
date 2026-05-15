@@ -108,6 +108,6 @@ For comprehensive security testing prompts based on OWASP LLM Top 10 and MITRE A
 
 ## Related Guides
 
-- [Live Testing Guide](LIVE_TESTING_GUIDE.md) - Manual scenario testing
+- [Scenario Testing Guide](SCENARIO_TESTING_GUIDE.md) - Scripted scenario testing
 - [Conversation Forensics Guide](CONVERSATION_FORENSICS_GUIDE.md) - Log analysis and pattern detection
 - [Adversarial Testing Prompts](ADVERSARIAL_TESTING_PROMPTS.md) - OWASP/MITRE attack patterns

@@ -29,7 +29,7 @@ struct ContentView: View {
                 // Switch statement determines which view to show
                 switch selectedTab {
                 case .testing:
-                    // Live testing interface
+                    // Scenario testing interface
                     TestingView()
                 case .analysis:
                     // Log analysis interface
@@ -75,7 +75,7 @@ struct ContentView: View {
 /// String raw value is used for display text
 /// CaseIterable allows us to loop through all cases
 enum TabSelection: String, CaseIterable {
-    case testing = "Testing"        // Live testing mode
+    case testing = "Testing"        // Scenario testing mode
     case analysis = "Analysis"      // Log analysis mode
     case adversarial = "Adversarial" // AI adversarial testing mode
     case reports = "Reports"        // Reports and results

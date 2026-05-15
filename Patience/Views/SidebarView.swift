@@ -37,7 +37,7 @@ struct SidebarView: View {
     var body: some View {
         List(selection: $selection) {
             Section("Testing") {
-                Label("Live Testing", systemImage: TabSelection.testing.icon)
+                Label("Scenario Testing", systemImage: TabSelection.testing.icon)
                     .tag(SidebarSelection.tab(.testing))
                 
                 Label("Adversarial", systemImage: TabSelection.adversarial.icon)

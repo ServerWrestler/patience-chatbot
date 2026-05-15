@@ -102,5 +102,5 @@ For more control, click **New Analysis** to configure:
 
 ## Related Guides
 
-- [Live Testing Guide](LIVE_TESTING_GUIDE.md) — Real-time scenario testing
+- [Scenario Testing Guide](SCENARIO_TESTING_GUIDE.md) — Scripted scenario testing
 - [Adversarial Testing Guide](ADVERSARIAL_TESTING_GUIDE.md) — AI-powered red teaming

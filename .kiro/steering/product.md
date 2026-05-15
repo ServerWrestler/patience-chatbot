@@ -9,7 +9,7 @@ Patience is a native macOS application built with Swift and SwiftUI for comprehe
 ## Purpose
 
 A comprehensive testing framework that provides:
-- **Live Testing**: Real-time scenario-based chatbot testing ✅
+- **Scenario Testing**: Scripted scenario-based chatbot testing ✅
 - **Log Analysis**: Basic context analysis (full features planned) ⚠️
 - **Adversarial Testing**: AI-powered automated testing ✅
 - **Reporting**: Detailed test results and analytics ✅
@@ -31,7 +31,7 @@ A comprehensive testing framework that provides:
 
 ## Implementation Status
 
-- **Live Testing**: Fully implemented with comprehensive scenario support
+- **Scenario Testing**: Fully implemented with comprehensive scenario support
 - **Adversarial Testing**: Fully implemented with Ollama, OpenAI, and Anthropic support
 - **Log Analysis**: Basic context analysis implemented; full features planned
 - **Reporting**: Complete HTML, JSON, and Markdown export capabilities
