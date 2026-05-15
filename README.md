@@ -1,10 +1,6 @@
-```
-PATIENCE
-────────────────────────────────────────
-automated red teaming · compliance validation
-```
+## PATIENCE
 
-Automated red teaming and compliance validation for AI chatbots — purpose-built for regulated industries.
+Automated red teaming · Compliance validation
 
 [Download](https://github.com/ServerWrestler/patience-chatbot/releases) · [patience-chatbot.ai](https://patience-chatbot.ai)
 
