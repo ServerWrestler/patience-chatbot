@@ -1,4 +1,4 @@
-## PATIENCE
+## ⏳ PATIENCE
 
 Automated red teaming · Compliance validation
 
@@ -10,7 +10,7 @@ Automated red teaming · Compliance validation
 
 **Scenario Testing** — Script multi-turn conversation flows, validate responses against custom rules, catch regressions before production.
 
-**Conversation Forensics** — Import production logs, surface failure patterns and policy violations, turn incidents into test cases.
+**Conversation Forensics** — Import production logs, surface failure patterns and policy violations, turn incidents into test cases. A guardrail-failure triage cascade classifies *where and how* a target's guardrails failed — per turn and across the whole episode — mapping findings to the OWASP LLM Top 10, staying on-device by default and reaching a frontier judge only when it changes the answer (and only after redaction).
 
 **Adversarial Testing** — AI autonomously probes your chatbot for prompt injection, jailbreaks, and social engineering. Maps findings to OWASP LLM Top 10 and MITRE ATLAS.
 

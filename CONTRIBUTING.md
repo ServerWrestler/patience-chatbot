@@ -19,7 +19,7 @@ open Patience.xcodeproj
 ## Development Workflow
 
 1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes following project patterns (see [AI_ASSISTANT_GUIDE.md](AI_ASSISTANT_GUIDE.md))
+2. Make changes following project patterns (see [CLAUDE.md](CLAUDE.md))
 3. Build and test: `⌘+B` then `⌘+R`
 4. Commit with clear messages
 5. Push and create a Pull Request
@@ -29,7 +29,7 @@ open Patience.xcodeproj
 - All types must be `Codable` and `Sendable`
 - UI updates on `@MainActor`
 - Use `async/await` for async operations
-- Add clear comments (see [AI_ASSISTANT_GUIDE.md](AI_ASSISTANT_GUIDE.md#code-documentation-standards))
+- Add clear comments (see [CLAUDE.md](CLAUDE.md#comments-mandatory))
 - Never store API keys in code (use Keychain)
 
 ## Project Structure

@@ -14,7 +14,6 @@
 		07DF1E4D2EEC81B6004972E2 /* SECURITY.md in Resources */ = {isa = PBXBuildFile; fileRef = 07DF1E492EEC81B6004972E2 /* SECURITY.md */; };
 		07DF1E4E2EEC81B6004972E2 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 07DF1E472EEC81B6004972E2 /* LICENSE */; };
 		07DF1E4F2EEC81B6004972E2 /* CONTRIBUTING.md in Resources */ = {isa = PBXBuildFile; fileRef = 07DF1E452EEC81B6004972E2 /* CONTRIBUTING.md */; };
-		07F9A71E2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 07F9A71D2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md */; };
 		A1000001 /* PatienceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000 /* PatienceApp.swift */; };
 		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002 /* ContentView.swift */; };
 		A1000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000004 /* Assets.xcassets */; };
@@ -35,6 +34,9 @@
 		A1000021 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020 /* SettingsView.swift */; };
 		A1000023 /* TestConfigEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022 /* TestConfigEditorView.swift */; };
 		A1000025 /* TestResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000024 /* TestResultsView.swift */; };
+		A1000031 /* ForensicsTriage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000030 /* ForensicsTriage.swift */; };
+		A1000033 /* EpisodeForensics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000032 /* EpisodeForensics.swift */; };
+		A1000035 /* FlywheelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000034 /* FlywheelStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,7 +47,6 @@
 		07DF1E472EEC81B6004972E2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = SOURCE_ROOT; };
 		07DF1E482EEC81B6004972E2 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		07DF1E492EEC81B6004972E2 /* SECURITY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SECURITY.md; sourceTree = SOURCE_ROOT; };
-		07F9A71D2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AI_ASSISTANT_GUIDE.md; sourceTree = SOURCE_ROOT; };
 		A0FFFFFF /* Patience.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Patience.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000 /* PatienceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatienceApp.swift; sourceTree = "<group>"; };
 		A1000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -68,6 +69,9 @@
 		A1000020 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1000022 /* TestConfigEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestConfigEditorView.swift; sourceTree = "<group>"; };
 		A1000024 /* TestResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestResultsView.swift; sourceTree = "<group>"; };
+		A1000030 /* ForensicsTriage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForensicsTriage.swift; sourceTree = "<group>"; };
+		A1000032 /* EpisodeForensics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpisodeForensics.swift; sourceTree = "<group>"; };
+		A1000034 /* FlywheelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlywheelStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -127,7 +131,6 @@
 				07DF1E472EEC81B6004972E2 /* LICENSE */,
 				07DF1E482EEC81B6004972E2 /* README.md */,
 				07DF1E492EEC81B6004972E2 /* SECURITY.md */,
-				07F9A71D2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md */,
 			);
 			path = "Preview Content";
 			sourceTree = "<group>";
@@ -151,8 +154,19 @@
 				A1000014 /* AdversarialTestOrchestrator.swift */,
 				A1000016B /* KeychainManager.swift */,
 				A1000016C /* CustomValidators.swift */,
+				A1000036 /* Forensics */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		A1000036 /* Forensics */ = {
+			isa = PBXGroup;
+			children = (
+				A1000030 /* ForensicsTriage.swift */,
+				A1000032 /* EpisodeForensics.swift */,
+				A1000034 /* FlywheelStore.swift */,
+			);
+			path = Forensics;
 			sourceTree = "<group>";
 		};
 		A1000028 /* Views */ = {
@@ -239,7 +253,6 @@
 				07DF1E4F2EEC81B6004972E2 /* CONTRIBUTING.md in Resources */,
 				07DF1E412EEBD7BB004972E2 /* .swiftlint.yml in Resources */,
 				A1000008 /* Preview Assets.xcassets in Resources */,
-				07F9A71E2EEE434100A07064 /* AI_ASSISTANT_GUIDE.md in Resources */,
 				A1000005 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -269,6 +282,9 @@
 				A1000021 /* SettingsView.swift in Sources */,
 				A1000023 /* TestConfigEditorView.swift in Sources */,
 				A1000025 /* TestResultsView.swift in Sources */,
+				A1000031 /* ForensicsTriage.swift in Sources */,
+				A1000033 /* EpisodeForensics.swift in Sources */,
+				A1000035 /* FlywheelStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
