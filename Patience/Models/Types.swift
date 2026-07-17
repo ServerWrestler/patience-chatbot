@@ -454,9 +454,47 @@ struct AdversarialTestConfig: Codable, Identifiable, Sendable {
     
     /// Optional safety limits (cost, rate limiting)
     var safety: SafetySettings?
-    
+
+    /// Optional judge/critic configuration (a second model that scores each target reply).
+    /// Optional so older saved configs remain decodable.
+    var judge: JudgeSettings?
+
     /// Report generation settings
     var reporting: AdversarialReportConfig
+}
+
+/// Configuration for the judge/critic model — a SECOND model (e.g. a separate local
+/// Ollama instance) that scores each target reply for a security breach after the turn.
+/// Its verdict is stored on the target message's metadata and can drive reporting.
+struct JudgeSettings: Codable, Sendable {
+    /// Whether the judge pass runs at all.
+    var enabled: Bool
+
+    /// AI provider for the judge (typically .ollama pointing at a second instance).
+    var provider: BotProvider
+
+    /// Judge model name (e.g. "llama3", "mistral").
+    var model: String?
+
+    /// Judge endpoint — point this at the second Ollama instance,
+    /// e.g. "http://localhost:11435/api/chat". Nil uses the provider default.
+    var endpoint: String?
+
+    /// API key if the judge provider is a paid cloud model (Keychain-managed upstream).
+    var apiKey: String?
+
+    /// Safe default: disabled, Ollama, second-instance port convention.
+    init(enabled: Bool = false,
+         provider: BotProvider = .ollama,
+         model: String? = nil,
+         endpoint: String? = "http://localhost:11435/api/chat",
+         apiKey: String? = nil) {
+        self.enabled = enabled
+        self.provider = provider
+        self.model = model
+        self.endpoint = endpoint
+        self.apiKey = apiKey
+    }
 }
 
 /// Configuration for the target bot in adversarial testing
@@ -528,9 +566,66 @@ struct ConversationSettings: Codable, Sendable {
     
     /// Optional testing goals to focus on
     var goals: [String]?
-    
+
     /// Optional timeout for entire conversation (milliseconds)
     var timeout: Int?
+
+    /// Optional adaptive-probing controls (escalation, refusal-branching, best-of-N).
+    /// Optional + decoded with defaults so older saved configs remain loadable.
+    var adaptive: AdaptiveSettings?
+}
+
+/// One harvested "win" in the attack-library flywheel: a probe that previously
+/// breached (or failed validation on) a target. Stored on-device and re-injected as a
+/// few-shot example in later runs so the adversary compounds what worked.
+struct AttackLibraryEntry: Codable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    /// The probe text that worked.
+    var probe: String
+    /// A short snippet of the target reply that revealed the breach (already on-device).
+    var replySnippet: String
+    /// Attack vector/category (from the judge verdict, or "" if unknown).
+    var vector: String
+    /// Severity from the judge ("critical"/"high"/... or "unknown").
+    var severity: String
+    /// When this entry was harvested.
+    var timestamp: Date = Date()
+    /// Whether this entry is active (injected into prompts). User-toggleable in the viewer.
+    var enabled: Bool = true
+    /// Free-form tags for organizing the library (e.g. "OWASP-LLM01", "prompt-injection",
+    /// "client:acme"). Persisted as part of the entry; surfaced as chips in the viewer.
+    /// Optional for back-compat: older entries decode with `tags == nil` and the viewer
+    /// treats nil the same as an empty array.
+    var tags: [String]? = nil
+}
+
+/// Controls how the adversarial bot adapts its probes turn-to-turn.
+/// All three knobs are independent and surfaced in the config editor.
+struct AdaptiveSettings: Codable, Sendable {
+    /// DETERMINISTIC ESCALATION: append the strategy's per-turn instruction
+    /// (e.g. RedTeam's recon → injection → disclosure → obfuscation → agency ladder).
+    var autoEscalate: Bool
+
+    /// OUTCOME-DRIVEN BRANCHING: when the previous target reply looks like a refusal,
+    /// instruct the adversary to pivot/obfuscate instead of repeating the failed probe.
+    var adaptOnRefusal: Bool
+
+    /// BEST-OF-N: generate this many candidate probes per turn and send the strongest.
+    /// 1 = disabled (single generation, original behavior). Capped at 5 in the UI.
+    var bestOfN: Int
+
+    /// FLYWHEEL: inject previously-successful probes from the attack library as
+    /// few-shot examples, and harvest new wins from this run back into the library.
+    var useFlywheel: Bool
+
+    /// Safe defaults: adaptation off, single generation — preserves prior behavior
+    /// for configs that don't specify adaptive settings.
+    init(autoEscalate: Bool = false, adaptOnRefusal: Bool = false, bestOfN: Int = 1, useFlywheel: Bool = false) {
+        self.autoEscalate = autoEscalate
+        self.adaptOnRefusal = adaptOnRefusal
+        self.bestOfN = max(1, bestOfN)
+        self.useFlywheel = useFlywheel
+    }
 }
 
 /// Available conversation strategies for adversarial testing
@@ -538,6 +633,7 @@ struct ConversationSettings: Codable, Sendable {
 enum ConversationStrategy: String, Codable, CaseIterable, Sendable {
     case exploratory = "exploratory"    // Broad exploration of capabilities
     case adversarial = "adversarial"    // Tries to find failures and edge cases
+    case redTeam = "redTeam"            // OWASP/MITRE security red-teaming (5-tier escalation)
     case focused = "focused"            // Deep dive into specific features
     case stress = "stress"              // Tests under pressure and complexity
     case custom = "custom"              // User-defined strategy

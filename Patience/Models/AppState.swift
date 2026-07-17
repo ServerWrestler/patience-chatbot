@@ -50,6 +50,10 @@ class AppState: ObservableObject {
     /// Results from completed adversarial tests
     /// Contains AI-generated conversations and their outcomes
     @Published var adversarialResults: [AdversarialTestResults] = []
+
+    /// Attack-library flywheel: probes that previously breached/failed a target,
+    /// re-injected as few-shot examples in later runs. Persisted to UserDefaults.
+    @Published var attackLibrary: [AttackLibraryEntry] = []
     
     /// Generated reports from test results
     /// Can be exported in multiple formats (JSON, HTML, Markdown)
@@ -111,86 +115,126 @@ class AppState: ObservableObject {
     }
     
     // MARK: - Test Configuration Management
-    
-    /// Adds a new live test configuration
-    /// Automatically saves to persistent storage after adding
+
+    /// Moves a scenario target-bot credential into the Keychain and blanks it in the returned
+    /// copy, so the persisted/exported config never carries the secret. Returns the sanitized
+    /// config to store. If no credential is present, the config is returned unchanged.
+    ///
+    /// The credential is re-hydrated from the Keychain at run time by `hydrated(_:)`.
+    private func sanitizeForStorage(_ config: TestConfig) -> TestConfig {
+        var sanitized = config
+        if let auth = sanitized.targetBot.authentication, !auth.credentials.isEmpty {
+            let account = KeychainManager.Account.scenarioBot(sanitized.id)
+            if !KeychainManager.shared.save(auth.credentials, account: account) {
+                showErrorMessage("Failed to securely store target-bot credentials. The configuration will be saved without them.")
+            }
+            // Blank the credential in the stored copy; the auth type is preserved.
+            sanitized.targetBot.authentication?.credentials = ""
+        }
+        return sanitized
+    }
+
+    /// Returns a copy of `config` with its target-bot credential re-populated from the Keychain.
+    /// Used immediately before a run so the executor has the real credential without it ever
+    /// living in the persisted config.
+    private func hydrated(_ config: TestConfig) -> TestConfig {
+        guard config.targetBot.authentication != nil else { return config }
+        guard let secret = KeychainManager.shared.secret(account: KeychainManager.Account.scenarioBot(config.id)) else {
+            return config
+        }
+        var hydrated = config
+        hydrated.targetBot.authentication?.credentials = secret
+        return hydrated
+    }
+
+    /// Adds a new live test configuration. The target-bot credential (if any) is moved to the
+    /// Keychain before the config is persisted.
     /// - Parameter config: The test configuration to add
     func addTestConfig(_ config: TestConfig) {
-        testConfigs.append(config)
+        testConfigs.append(sanitizeForStorage(config))
         saveConfigs()
     }
-    
-    /// Updates an existing live test configuration
-    /// Finds config by ID and replaces it with new version
-    /// Automatically saves to persistent storage after updating
+
+    /// Updates an existing live test configuration. Credentials are re-sanitized to the Keychain.
     /// - Parameter config: The updated test configuration
     func updateTestConfig(_ config: TestConfig) {
         // Find the config with matching ID
         if let index = testConfigs.firstIndex(where: { $0.id == config.id }) {
-            testConfigs[index] = config
+            testConfigs[index] = sanitizeForStorage(config)
             saveConfigs()
         }
     }
-    
+
     /// Deletes a live test configuration
-    /// Removes all configs with matching ID
+    /// Removes all configs with matching ID, and its Keychain credential
     /// Automatically saves to persistent storage after deletion
     /// - Parameter config: The test configuration to delete
     func deleteTestConfig(_ config: TestConfig) {
+        KeychainManager.shared.delete(account: KeychainManager.Account.scenarioBot(config.id))
         testConfigs.removeAll { $0.id == config.id }
         saveConfigs()
     }
     
     // MARK: - Adversarial Configuration Management
     
-    /// Adds a new adversarial test configuration
-    /// Extracts and securely stores API key in Keychain before saving
-    /// The config is sanitized (API key removed) before being stored in UserDefaults
-    /// - Parameter config: The adversarial test configuration to add
-    func addAdversarialConfig(_ config: AdversarialTestConfig) {
+    /// Moves both provider keys (adversarial bot AND judge) into the Keychain and nils them in
+    /// the returned copy, so the persisted config never carries a secret. Returns the sanitized
+    /// config to store. Keys are re-hydrated at run time by `hydrated(_:)`.
+    private func sanitizeForStorage(_ config: AdversarialTestConfig) -> AdversarialTestConfig {
         var sanitized = config
-        // If config contains an API key, save it securely to Keychain
         if let key = sanitized.adversarialBot.apiKey {
-            let success = KeychainManager.shared.saveAPIKey(for: sanitized.id, key: key)
-            if !success {
-                showErrorMessage("Failed to securely save API key. The configuration will be saved without the API key.")
+            if !KeychainManager.shared.save(key, account: KeychainManager.Account.adversarialBot(sanitized.id)) {
+                showErrorMessage("Failed to securely save the adversarial API key. The configuration will be saved without it.")
             }
-            // Remove API key from config before saving to UserDefaults (security)
             sanitized.adversarialBot.apiKey = nil
         }
-        adversarialConfigs.append(sanitized)
+        if let judgeKey = sanitized.judge?.apiKey {
+            if !KeychainManager.shared.save(judgeKey, account: KeychainManager.Account.judge(sanitized.id)) {
+                showErrorMessage("Failed to securely save the judge API key. The configuration will be saved without it.")
+            }
+            sanitized.judge?.apiKey = nil
+        }
+        return sanitized
+    }
+
+    /// Returns a copy of `config` with both provider keys re-populated from the Keychain, used
+    /// immediately before a run so the orchestrator can authenticate without the keys ever
+    /// living in the persisted config.
+    private func hydrated(_ config: AdversarialTestConfig) -> AdversarialTestConfig {
+        var hydrated = config
+        if hydrated.adversarialBot.apiKey == nil {
+            hydrated.adversarialBot.apiKey = KeychainManager.shared.apiKey(for: config.id)
+        }
+        if hydrated.judge != nil, hydrated.judge?.apiKey == nil {
+            hydrated.judge?.apiKey = KeychainManager.shared.secret(account: KeychainManager.Account.judge(config.id))
+        }
+        return hydrated
+    }
+
+    /// Adds a new adversarial test configuration. Provider keys are moved to the Keychain before
+    /// the config is persisted.
+    /// - Parameter config: The adversarial test configuration to add
+    func addAdversarialConfig(_ config: AdversarialTestConfig) {
+        adversarialConfigs.append(sanitizeForStorage(config))
         saveConfigs()
     }
-    
-    /// Updates an existing adversarial test configuration
-    /// Handles API key storage securely in Keychain
+
+    /// Updates an existing adversarial test configuration. Provider keys are re-sanitized to the
+    /// Keychain.
     /// - Parameter config: The updated adversarial test configuration
     func updateAdversarialConfig(_ config: AdversarialTestConfig) {
         if let index = adversarialConfigs.firstIndex(where: { $0.id == config.id }) {
-            var sanitized = config
-            // If config contains an API key, update it in Keychain
-            if let key = sanitized.adversarialBot.apiKey {
-                let success = KeychainManager.shared.saveAPIKey(for: sanitized.id, key: key)
-                if !success {
-                    showErrorMessage("Failed to securely update API key. The configuration will be saved without the API key.")
-                }
-                // Remove API key from config before saving to UserDefaults (security)
-                sanitized.adversarialBot.apiKey = nil
-            }
-            adversarialConfigs[index] = sanitized
+            adversarialConfigs[index] = sanitizeForStorage(config)
             saveConfigs()
         }
     }
-    
+
     /// Deletes an adversarial test configuration
-    /// Also removes associated API key from Keychain
+    /// Also removes both associated provider keys (adversarial bot + judge) from Keychain
     /// - Parameter config: The adversarial test configuration to delete
     func deleteAdversarialConfig(_ config: AdversarialTestConfig) {
-        // Try to delete API key from Keychain
-        let success = KeychainManager.shared.deleteAPIKey(for: config.id)
-        if !success {
-            showErrorMessage("Failed to delete API key from secure storage. The configuration will still be removed.")
-        }
+        KeychainManager.shared.deleteAPIKey(for: config.id)
+        KeychainManager.shared.delete(account: KeychainManager.Account.judge(config.id))
         adversarialConfigs.removeAll { $0.id == config.id }
         saveConfigs()
     }
@@ -251,8 +295,11 @@ class AppState: ObservableObject {
         
         do {
             let executor = TestExecutor()
+            // Re-populate the target-bot credential from the Keychain just before running;
+            // the persisted config carries a blank credential (see sanitizeForStorage).
+            let runConfig = hydrated(config)
             // Execute test with progress callback
-            let results = try await executor.executeTests(config: config) { progress, status in
+            let results = try await executor.executeTests(config: runConfig) { progress, status in
                 // Update UI on main thread
                 await MainActor.run {
                     self.currentTestProgress = progress
@@ -320,7 +367,18 @@ class AppState: ObservableObject {
         
         do {
             let orchestrator = AdversarialTestOrchestrator()
-            let conversations = try await orchestrator.run(config: config)
+
+            // Re-populate provider keys from the Keychain just before running; the persisted
+            // config carries nil keys (see sanitizeForStorage).
+            let runConfig = hydrated(config)
+
+            // FLYWHEEL: feed enabled attack-library probes as few-shot examples when enabled.
+            let useFlywheel = runConfig.conversation.adaptive?.useFlywheel ?? false
+            let flywheelExamples = useFlywheel
+                ? attackLibrary.filter { $0.enabled }.map { $0.probe }
+                : []
+
+            let conversations = try await orchestrator.run(config: runConfig, flywheelExamples: flywheelExamples)
             
             // Package results with summary statistics
             let result = AdversarialTestResults(
@@ -340,7 +398,12 @@ class AppState: ObservableObject {
             )
             adversarialResults.append(result)
             saveConfigs()
-            
+
+            // FLYWHEEL HARVEST: store winning probes from this run for future injection.
+            if useFlywheel {
+                harvestAttackLibrary(from: result)
+            }
+
             // Show success message (isError: false means it's informational)
             showErrorMessage("Adversarial test completed with \(conversations.count) conversation(s).", isError: false)
         } catch {
@@ -447,64 +510,32 @@ class AppState: ObservableObject {
                 do {
                     let data = try Data(contentsOf: url)
                     let decoder = JSONDecoder()
-                    
-                    // Add detailed error logging
-                    print("DEBUG IMPORT: File size: \(data.count) bytes")
-                    if let jsonString = String(data: data, encoding: .utf8) {
-                        print("DEBUG IMPORT: JSON content preview: \(String(jsonString.prefix(500)))")
-                    }
-                    
+
+                    // Accept either an array of configs or a single config.
                     var importedConfigs: [TestConfig] = []
-                    
-                    // Try to decode as array of configurations first
-                    do {
-                        let configArray = try decoder.decode([TestConfig].self, from: data)
+                    if let configArray = try? decoder.decode([TestConfig].self, from: data) {
                         importedConfigs = configArray
-                        print("DEBUG IMPORT: Successfully decoded as array of \(configArray.count) configs")
-                    } catch let arrayError {
-                        print("DEBUG IMPORT: Array decode failed: \(arrayError)")
-                        
-                        // If that fails, try to decode as single configuration
-                        do {
-                            let singleConfig = try decoder.decode(TestConfig.self, from: data)
-                            importedConfigs = [singleConfig]
-                            print("DEBUG IMPORT: Successfully decoded as single config")
-                        } catch let singleError {
-                            print("DEBUG IMPORT: Single config decode failed: \(singleError)")
-                            
-                            // Provide detailed error information
-                            if let decodingError = singleError as? DecodingError {
-                                print("DEBUG IMPORT: Decoding error details: \(decodingError)")
-                                switch decodingError {
-                                case .keyNotFound(let key, let context):
-                                    print("DEBUG IMPORT: Missing key '\(key.stringValue)' at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                                case .typeMismatch(let type, let context):
-                                    print("DEBUG IMPORT: Type mismatch for type \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                                case .valueNotFound(let type, let context):
-                                    print("DEBUG IMPORT: Value not found for type \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                                case .dataCorrupted(let context):
-                                    print("DEBUG IMPORT: Data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                                @unknown default:
-                                    print("DEBUG IMPORT: Unknown decoding error")
-                                }
-                            }
-                            
-                            throw NSError(domain: "ImportError", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not contain valid test configuration(s). Check console for detailed error information."])
-                        }
+                    } else if let singleConfig = try? decoder.decode(TestConfig.self, from: data) {
+                        importedConfigs = [singleConfig]
+                    } else {
+                        throw NSError(domain: "ImportError", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not contain a valid test configuration or array of configurations."])
                     }
-                    
+
                     // Generate new IDs for imported configs to avoid conflicts
                     let configsWithNewIds = importedConfigs.map { config in
                         var newConfig = config
                         newConfig.id = UUID()
                         return newConfig
                     }
-                    
+
                     Task { @MainActor in
-                        // Add to existing configurations
-                        self.testConfigs.append(contentsOf: configsWithNewIds)
+                        // Route each imported config through sanitizeForStorage so any inline
+                        // credentials in the file are moved to the Keychain, never persisted.
+                        for config in configsWithNewIds {
+                            self.testConfigs.append(self.sanitizeForStorage(config))
+                        }
                         self.saveConfigs()
-                        
+
                         self.showErrorMessage("Successfully imported \(configsWithNewIds.count) configuration(s) from \(url.lastPathComponent)", isError: false)
                     }
                 } catch {
@@ -618,6 +649,43 @@ class AppState: ObservableObject {
            let decoded = try? JSONDecoder().decode([AdversarialTestResults].self, from: data) {
             adversarialResults = decoded
         }
+
+        // Load attack-library flywheel
+        if let data = UserDefaults.standard.data(forKey: "attackLibrary"),
+           let decoded = try? JSONDecoder().decode([AttackLibraryEntry].self, from: data) {
+            attackLibrary = decoded
+        }
+
+        migrateInlineSecretsToKeychain()
+    }
+
+    /// One-time migration for configs saved by builds that stored secrets inline in UserDefaults.
+    /// Any config still carrying an inline credential/key has it moved to the Keychain and blanked
+    /// in memory, then everything is re-persisted. Idempotent: once migrated there's nothing to do.
+    private func migrateInlineSecretsToKeychain() {
+        var migrated = false
+
+        for i in testConfigs.indices {
+            if let auth = testConfigs[i].targetBot.authentication, !auth.credentials.isEmpty {
+                KeychainManager.shared.save(auth.credentials, account: KeychainManager.Account.scenarioBot(testConfigs[i].id))
+                testConfigs[i].targetBot.authentication?.credentials = ""
+                migrated = true
+            }
+        }
+        for i in adversarialConfigs.indices {
+            if let key = adversarialConfigs[i].adversarialBot.apiKey {
+                KeychainManager.shared.save(key, account: KeychainManager.Account.adversarialBot(adversarialConfigs[i].id))
+                adversarialConfigs[i].adversarialBot.apiKey = nil
+                migrated = true
+            }
+            if let judgeKey = adversarialConfigs[i].judge?.apiKey {
+                KeychainManager.shared.save(judgeKey, account: KeychainManager.Account.judge(adversarialConfigs[i].id))
+                adversarialConfigs[i].judge?.apiKey = nil
+                migrated = true
+            }
+        }
+
+        if migrated { saveConfigs() }
     }
     
     /// Saves all configurations and results to UserDefaults
@@ -633,9 +701,10 @@ class AppState: ObservableObject {
             UserDefaults.standard.set(encoded, forKey: "testConfigs")
         }
         
-        // Save adversarial configs (without API keys - those are in Keychain)
+        // Save adversarial configs. Both provider keys (adversarial bot + judge) are already
+        // nil here — sanitizeForStorage(_:) moved them to the Keychain before the config
+        // reached this array — so nothing secret is written to UserDefaults.
         if let encoded = try? JSONEncoder().encode(adversarialConfigs) {
-            // Note: apiKey is nil for all adversarialConfigs due to sanitization before save
             UserDefaults.standard.set(encoded, forKey: "adversarialConfigs")
         }
         
@@ -662,6 +731,107 @@ class AppState: ObservableObject {
         // Save adversarial results
         if let encoded = try? JSONEncoder().encode(adversarialResults) {
             UserDefaults.standard.set(encoded, forKey: "adversarialResults")
+        }
+
+        // Save attack-library flywheel
+        if let encoded = try? JSONEncoder().encode(attackLibrary) {
+            UserDefaults.standard.set(encoded, forKey: "attackLibrary")
+        }
+    }
+
+    // MARK: - Attack Library (Flywheel)
+
+    /// Adds an attack-library entry and persists. Deduplicates on identical probe text.
+    func addAttackLibraryEntry(_ entry: AttackLibraryEntry) {
+        guard !attackLibrary.contains(where: { $0.probe == entry.probe }) else { return }
+        attackLibrary.append(entry)
+        saveConfigs()
+    }
+
+    /// Deletes an attack-library entry and persists.
+    func deleteAttackLibraryEntry(_ entry: AttackLibraryEntry) {
+        attackLibrary.removeAll { $0.id == entry.id }
+        saveConfigs()
+    }
+
+    /// Toggles whether an entry is injected into future runs, and persists.
+    func setAttackLibraryEntryEnabled(_ entry: AttackLibraryEntry, enabled: Bool) {
+        guard let idx = attackLibrary.firstIndex(where: { $0.id == entry.id }) else { return }
+        attackLibrary[idx].enabled = enabled
+        saveConfigs()
+    }
+
+    /// Replaces an entry's tag list (after de-dup + trim) and persists.
+    /// Empty / whitespace-only tags are dropped so the viewer's chip list stays clean.
+    func setAttackLibraryEntryTags(_ entry: AttackLibraryEntry, tags: [String]) {
+        guard let idx = attackLibrary.firstIndex(where: { $0.id == entry.id }) else { return }
+        let cleaned = tags
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        var seen = Set<String>()
+        let deduped = cleaned.filter { seen.insert($0).inserted }
+        attackLibrary[idx].tags = deduped.isEmpty ? nil : deduped
+        saveConfigs()
+    }
+
+    /// Encodes the attack library as pretty-printed JSON for export to disk.
+    /// The serialized shape is a JSON array of `AttackLibraryEntry` — same wire
+    /// format used internally so a re-import is lossless. IDs are preserved so
+    /// re-importing the same file is idempotent (dedup keys on probe text).
+    func exportAttackLibraryJSON() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return try encoder.encode(attackLibrary)
+    }
+
+    /// Imports a previously-exported attack-library JSON file. Entries with a probe
+    /// already in the library are skipped (existing `addAttackLibraryEntry` dedup
+    /// rule), so re-importing a partly-overlapping export is safe.
+    ///
+    /// - Parameter data: Raw JSON bytes; expected shape is `[AttackLibraryEntry]`.
+    /// - Returns: Count of entries actually added (skipping duplicates).
+    /// - Throws: Decoding errors propagate so the caller can surface them.
+    @discardableResult
+    func importAttackLibraryJSON(_ data: Data) throws -> Int {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let entries = try decoder.decode([AttackLibraryEntry].self, from: data)
+        let before = attackLibrary.count
+        for entry in entries {
+            // addAttackLibraryEntry handles dedup-by-probe and persists each insert.
+            addAttackLibraryEntry(entry)
+        }
+        return attackLibrary.count - before
+    }
+
+    /// Harvests winning probes from a completed run into the attack library.
+    /// A "win" = the judge flagged a breach, or (absent a judge) a validation failed.
+    /// Called after an adversarial run when the flywheel is enabled.
+    ///
+    /// - Parameter result: The completed adversarial test results to harvest from.
+    func harvestAttackLibrary(from result: AdversarialTestResults) {
+        for convo in result.conversations {
+            // Pair each target reply with the probe that preceded it.
+            for (idx, message) in convo.messages.enumerated() where message.role == .target {
+                let breached = message.metadata?[JudgeVerdict.MetaKey.breached] == "true"
+                guard breached else { continue }
+                // The preceding adversarial message is the probe that caused this.
+                guard idx > 0, convo.messages[idx - 1].role == .adversarial else { continue }
+                let probe = convo.messages[idx - 1].content
+                let vector = message.metadata?[JudgeVerdict.MetaKey.vector] ?? ""
+                // Seed tags from the judge's vector so the entry is filterable
+                // immediately; user can edit tags later in the viewer.
+                let seededTags = vector.isEmpty ? nil : [vector]
+                let entry = AttackLibraryEntry(
+                    probe: probe,
+                    replySnippet: String(message.content.prefix(160)),
+                    vector: vector,
+                    severity: message.metadata?[JudgeVerdict.MetaKey.severity] ?? "unknown",
+                    tags: seededTags
+                )
+                addAttackLibraryEntry(entry)
+            }
         }
     }
     

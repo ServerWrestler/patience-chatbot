@@ -135,7 +135,7 @@ let router = ForensicsRouter(
     validators: [RefusalDetector(), SignatureMatcher(), PIIScanner()],
     localJudge: OllamaJudge(model: "qwen3:8b", schema: forensicsSchema),
     frontier:   ClaudeJudge(schema: forensicsSchema),
-    redact:     Redactor().scrub,
+    redact:     Redactor.defaultClosure,
     config:     TriageConfig(frontierEnabled: regulated ? false : true)
 )
 

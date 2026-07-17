@@ -1,158 +1,134 @@
 import Foundation
 import Security
 
-/// Manages secure storage of API keys in the macOS Keychain
-/// Uses the Security framework to store sensitive credentials safely
-/// 
-/// Why use Keychain:
-/// - API keys are encrypted by the system
-/// - Keys persist across app launches
-/// - Keys are protected by macOS security
-/// - Keys are NOT stored in plain text files or UserDefaults
-/// 
-/// Each API key is associated with an AdversarialTestConfig.ID
-/// This allows different configurations to have different API keys
-/// 
-/// Thread-safe: All operations are synchronous and safe to call from any thread
-/// Singleton: Use KeychainManager.shared to access
+/// Manages secure storage of secrets (API keys, target-bot credentials) in the macOS Keychain.
+/// Uses the Security framework so sensitive material is encrypted at rest by the system and
+/// never written to UserDefaults, configs, or exported JSON.
+///
+/// Why Keychain:
+/// - Secrets are encrypted by the system and protected by macOS security.
+/// - They persist across launches without living in plain-text preference plists.
+/// - `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` keeps them on THIS device — they never
+///   sync to iCloud Keychain and are excluded from encrypted backups. For a security tool
+///   that's the correct posture: credentials should not travel off the machine they're used on.
+///
+/// Account namespacing (see `Account`): a single config can own more than one secret (an
+/// adversarial-bot key AND a judge key), and scenario configs are a separate ID space, so each
+/// secret is stored under a distinct, collision-free account string.
+///
+/// Thread-safe: SecItem operations are synchronous and safe to call from any thread.
+/// Singleton: use `KeychainManager.shared`.
 final class KeychainManager {
-    /// Shared singleton instance
-    /// Use this instead of creating new instances
+    /// Shared singleton instance.
     static let shared = KeychainManager()
-    
-    /// Private initializer enforces singleton pattern
+
+    /// Private initializer enforces the singleton pattern.
     private init() {}
 
-    /// Service identifier for Keychain items
-    /// All API keys are stored under this service name
-    /// This groups all Patience API keys together in Keychain Access.app
+    /// Service identifier grouping all Patience secrets in Keychain Access.app.
     private let service = "com.patience.security.apiKeys"
 
-    /// Saves an API key in the keychain associated with the given AdversarialTestConfig.ID
-    /// If a key already exists for this ID, it will be updated
-    /// 
-    /// - Parameters:
-    ///   - id: The AdversarialTestConfig.ID to associate with the API key
-    ///   - key: The API key string to save (e.g., OpenAI API key, Anthropic API key)
-    /// - Returns: true if the save operation was successful, false otherwise
-    /// 
-    /// How it works:
-    /// 1. Converts key string to Data
-    /// 2. Checks if item already exists in Keychain
-    /// 3. If exists: Updates the existing item with new key
-    /// 4. If not exists: Adds new item to Keychain
-    /// 
-    /// Keychain attributes:
-    /// - kSecClass: kSecClassGenericPassword (stores as generic password)
-    /// - kSecAttrService: "com.patience.security.apiKeys" (groups all Patience keys)
-    /// - kSecAttrAccount: config ID as string (unique identifier for this key)
-    /// - kSecValueData: encrypted key data
-    func saveAPIKey(for id: AdversarialTestConfig.ID, key: String) -> Bool {
-        guard let keyData = key.data(using: .utf8) else {
-            return false
-        }
+    // MARK: - Account namespacing
 
-        // Build query dictionary to identify this specific Keychain item
-        // CFString keys are required by Security framework
+    /// Builds the Keychain account string for each kind of secret. Centralizing this here keeps
+    /// the naming scheme in one place and prevents two secret kinds from colliding on one ID.
+    enum Account {
+        /// Adversarial-bot provider key. Unchanged from the original scheme (bare UUID) so
+        /// secrets stored by earlier builds remain retrievable.
+        static func adversarialBot(_ id: AdversarialTestConfig.ID) -> String { id.uuidString }
+
+        /// Judge/critic provider key — a second secret owned by the same adversarial config.
+        static func judge(_ id: AdversarialTestConfig.ID) -> String { "\(id.uuidString).judge" }
+
+        /// Scenario target-bot credential. Prefixed to stay clear of the adversarial UUID space.
+        static func scenarioBot(_ id: TestConfig.ID) -> String { "scenario.\(id.uuidString)" }
+    }
+
+    // MARK: - Generic secret storage
+
+    /// Stores (or updates) a secret under `account`. Returns false on encoding failure or any
+    /// Keychain error. Items are stored device-only and available when the device is unlocked.
+    ///
+    /// - Parameters:
+    ///   - secret: The secret string to store.
+    ///   - account: The namespaced account string (see `Account`).
+    /// - Returns: true if the secret was saved or updated successfully.
+    @discardableResult
+    func save(_ secret: String, account: String) -> Bool {
+        guard let data = secret.data(using: .utf8) else { return false }
+
         let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,  // Type: generic password
-            kSecAttrService: service,              // Service: com.patience.security.apiKeys
-            kSecAttrAccount: id.uuidString         // Account: unique config ID
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
         ]
 
-        // Check if item already exists in Keychain
-        // Try to find existing item
-        // SecItemCopyMatching returns errSecSuccess if found, errSecItemNotFound if not
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         if status == errSecSuccess {
-            // Item exists - update it with new key data
-            // Only update the data, keep other attributes the same
+            // Update existing item's data (and (re)assert accessibility).
             let attributesToUpdate: [CFString: Any] = [
-                kSecValueData: keyData  // New encrypted key data
+                kSecValueData: data,
+                kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
             ]
-            let updateStatus = SecItemUpdate(query as CFDictionary, attributesToUpdate as CFDictionary)
-            return updateStatus == errSecSuccess  // true if update succeeded
+            return SecItemUpdate(query as CFDictionary, attributesToUpdate as CFDictionary) == errSecSuccess
         } else if status == errSecItemNotFound {
-            // Item doesn't exist - add new item to Keychain
-            // Start with query attributes and add the data
             var newItem = query
-            newItem[kSecValueData] = keyData  // Encrypted key data
-            let addStatus = SecItemAdd(newItem as CFDictionary, nil)
-            return addStatus == errSecSuccess  // true if add succeeded
+            newItem[kSecValueData] = data
+            newItem[kSecAttrAccessible] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            return SecItemAdd(newItem as CFDictionary, nil) == errSecSuccess
         } else {
-            // Unexpected error (permissions, etc.)
             return false
         }
     }
 
-    /// Retrieves an API key from the keychain associated with the given AdversarialTestConfig.ID
-    /// 
-    /// - Parameter id: The AdversarialTestConfig.ID to retrieve the API key for
-    /// - Returns: The API key string if found, nil if not found or error occurred
-    /// 
-    /// How it works:
-    /// 1. Queries Keychain for item matching the config ID
-    /// 2. If found, retrieves the encrypted data
-    /// 3. Converts data back to string
-    /// 4. Returns the decrypted API key
-    /// 
-    /// Returns nil if:
-    /// - No key exists for this ID
-    /// - Keychain access denied
-    /// - Data cannot be converted to string
-    func apiKey(for id: AdversarialTestConfig.ID) -> String? {
-        // Build query to find and retrieve the key data
+    /// Retrieves the secret stored under `account`, or nil if absent / access denied / decode fails.
+    func secret(account: String) -> String? {
         let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,  // Type: generic password
-            kSecAttrService: service,              // Service: com.patience.security.apiKeys
-            kSecAttrAccount: id.uuidString,        // Account: unique config ID
-            kSecReturnData: true,                  // Return the actual data (not just attributes)
-            kSecMatchLimit: kSecMatchLimitOne      // Only return one item (should be unique anyway)
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecReturnData: true,
+            kSecMatchLimit: kSecMatchLimitOne
         ]
 
-        // Variable to receive the result
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        
-        // Check if retrieval succeeded and convert data to string
-        guard status == errSecSuccess,           // Found the item
-              let data = item as? Data,          // Got data back
-              let key = String(data: data, encoding: .utf8) else {  // Converted to string
-            return nil  // Not found or conversion failed
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let secret = String(data: data, encoding: .utf8) else {
+            return nil
         }
-
-        return key  // Return the decrypted API key
+        return secret
     }
 
-    /// Deletes an API key from the keychain associated with the given AdversarialTestConfig.ID
-    /// 
-    /// - Parameter id: The AdversarialTestConfig.ID to delete the API key for
-    /// - Returns: true if the deletion was successful or item didn't exist, false on error
-    /// 
-    /// How it works:
-    /// 1. Queries Keychain for item matching the config ID
-    /// 2. Deletes the item if found
-    /// 
-    /// Returns true if:
-    /// - Item was successfully deleted (errSecSuccess)
-    /// - Item didn't exist anyway (errSecItemNotFound)
-    /// 
-    /// Returns false if:
-    /// - Keychain access denied
-    /// - Other unexpected error
-    func deleteAPIKey(for id: AdversarialTestConfig.ID) -> Bool {
-        // Build query to identify the item to delete
+    /// Deletes the secret under `account`. Returns true if deleted or already absent.
+    @discardableResult
+    func delete(account: String) -> Bool {
         let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,  // Type: generic password
-            kSecAttrService: service,              // Service: com.patience.security.apiKeys
-            kSecAttrAccount: id.uuidString         // Account: unique config ID
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account
         ]
-
-        // Attempt to delete the item
         let status = SecItemDelete(query as CFDictionary)
-        
-        // Success if deleted or if it didn't exist
-        // Both cases mean the key is no longer in Keychain
         return status == errSecSuccess || status == errSecItemNotFound
+    }
+
+    // MARK: - Typed convenience (adversarial bot)
+
+    /// Saves an adversarial-bot provider key for the given config ID.
+    @discardableResult
+    func saveAPIKey(for id: AdversarialTestConfig.ID, key: String) -> Bool {
+        save(key, account: Account.adversarialBot(id))
+    }
+
+    /// Retrieves the adversarial-bot provider key for the given config ID.
+    func apiKey(for id: AdversarialTestConfig.ID) -> String? {
+        secret(account: Account.adversarialBot(id))
+    }
+
+    /// Deletes the adversarial-bot provider key for the given config ID.
+    @discardableResult
+    func deleteAPIKey(for id: AdversarialTestConfig.ID) -> Bool {
+        delete(account: Account.adversarialBot(id))
     }
 }

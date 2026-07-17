@@ -173,3 +173,100 @@ struct ForensicsRouter {
     private func disagreement(_ samples: [Verdict]) -> Bool { false }              // (stub)
     private func recordCalibrationPair(local: Verdict, frontier: Verdict) { }      // (stub) -> flywheel store
 }
+
+// MARK: - Redactor
+
+/// Default PII/secret redactor used as the `redact:` parameter on `ForensicsRouter`
+/// and `EpisodeForensics`. Replaces common high-confidence patterns with type-tagged
+/// placeholders (e.g. `<EMAIL>`, `<PHONE>`, `<SSN>`) so the surrounding text is still
+/// legible to a judge while the sensitive token is gone.
+///
+/// Design constraints, in order of importance:
+///   1. **Deterministic** — calibration sampling compares local vs frontier verdicts on
+///      the same redacted input; non-determinism would poison the signal.
+///   2. **Conservative** — false positives (over-redaction) are cheap; false negatives
+///      (PII leaking to the frontier) are the failure mode we're paid to prevent.
+///   3. **Lossy by design** — we tag the *type* of redaction, not the original value;
+///      restoring a transcript from a redacted copy is intentionally impossible.
+///   4. **No dependencies** — pure Foundation + NSRegularExpression, so this can run
+///      on every turn in a tight loop without I/O or async hops.
+///
+/// Patterns covered (high confidence, low collision risk):
+///   - Emails, US/E.164 phone numbers, US SSNs, credit-card-shaped 13–19 digit runs
+///   - IPv4 addresses
+///   - Anthropic / OpenAI / AWS / generic `sk-…` / `Bearer …` API keys + JWT-shaped tokens
+///   - URL query strings (URL stays, `?...` is replaced — query strings frequently carry
+///     tokens and IDs but the host/path are useful context for the judge)
+///
+/// Patterns intentionally NOT covered here:
+///   - Personal names / addresses — require NER and are noisy. A future revision can use
+///     `NaturalLanguage.NLTagger` for `.nameType` once we have a holdout set to tune false
+///     positives against. Until then, the rubric should not encourage judges to assume
+///     PII-free input — Stage 0's `PIIScanner` will flag what the regex misses.
+///
+/// Bumping any pattern that changes redaction output requires re-running calibration —
+/// the frontier sees a different input shape after the change.
+struct Redactor {
+    /// All replacement rules in evaluation order. Order matters: more specific patterns
+    /// (e.g. `Bearer sk-...`) must precede broader ones (e.g. raw `sk-...`) so the wider
+    /// rule doesn't eat the leading keyword.
+    private static let rules: [(NSRegularExpression, String)] = {
+        // Each pair: (compiled regex, placeholder). Built once; the regexes are immutable.
+        let raw: [(String, String, NSRegularExpression.Options)] = [
+            // --- Auth / secrets first; they're the highest-cost leak.
+            (#"Bearer\s+[A-Za-z0-9._\-+/=]{16,}"#, "<TOKEN>", []),
+            (#"AKIA[0-9A-Z]{16}"#, "<AWS_KEY>", []),                      // AWS access key
+            (#"sk-ant-[A-Za-z0-9_\-]{20,}"#, "<API_KEY>", []),            // Anthropic (before the generic sk- rule)
+            (#"sk-[A-Za-z0-9_\-]{20,}"#, "<API_KEY>", []),                // OpenAI / generic
+            (#"eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+"#, "<JWT>", []),
+            (#"-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----"#, "<PRIVATE_KEY>", []),
+            // --- Network identifiers
+            (#"\b(?:\d{1,3}\.){3}\d{1,3}\b"#, "<IP>", []),
+            // --- Direct PII patterns
+            (#"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b"#, "<EMAIL>", []),
+            (#"\b\d{3}-\d{2}-\d{4}\b"#, "<SSN>", []),                     // US SSN with dashes
+            // Credit card-shaped: 13–19 digits with optional space/dash separators.
+            (#"\b(?:\d[ -]?){13,19}\b"#, "<CC>", []),
+            // E.164 / US phone: tolerate parens, dots, spaces, and a leading +country.
+            (#"(?:\+?\d{1,3}[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b"#, "<PHONE>", []),
+            // --- URL query strings (host/path kept, params dropped — they often hide tokens).
+            (#"(\bhttps?://[^\s?#]+)\?[^\s#]*"#, "$1?<QUERY>", []),
+        ]
+        return raw.compactMap { pattern, placeholder, opts in
+            // If a pattern fails to compile in development, fail loudly rather than
+            // silently shipping a redactor that quietly does less than its docs claim.
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: opts) else {
+                assertionFailure("Redactor: failed to compile pattern \(pattern)")
+                return nil
+            }
+            return (regex, placeholder)
+        }
+    }()
+
+    /// Applies the default redaction rules to `text` and returns the cleaned string.
+    /// Exposed separately from the `Turn` overload so callers that hold raw strings
+    /// (e.g. the JSONL exporter) can reuse the same rules without faking a `Turn`.
+    static func redact(_ text: String) -> String {
+        var current = text
+        for (regex, placeholder) in rules {
+            let range = NSRange(current.startIndex..., in: current)
+            current = regex.stringByReplacingMatches(
+                in: current,
+                options: [],
+                range: range,
+                withTemplate: placeholder
+            )
+        }
+        return current
+    }
+
+    /// Returns a copy of `turn` with its `text` redacted. Role and index are preserved
+    /// so the turn's position in the episode and its speaker remain attributable.
+    static func redact(_ turn: Turn) -> Turn {
+        Turn(role: turn.role, text: redact(turn.text), index: turn.index)
+    }
+
+    /// Closure form for sites that take `(Turn) -> Turn` (the `redact:` parameters on
+    /// `ForensicsRouter` and `EpisodeForensics`). Use as `Redactor.defaultClosure`.
+    static let defaultClosure: (Turn) -> Turn = { Redactor.redact($0) }
+}

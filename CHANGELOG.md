@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Adversarial testing — real attack prompts & editable adversary prompt.** Strategy prompts
+  are now first-class data: a `RedTeam` strategy carrying the full OWASP LLM Top 10 + MITRE
+  ATLAS arsenal, an editable Adversary Prompt box pre-filled with the selected strategy's
+  built-in prompt (persisted as an override only when changed), and 16 load-in templates
+  grouped as Full Arsenals / OWASP LLM Top 10 (LLM01–LLM10) / Tactics.
+- **Adaptive probing.** Auto-escalate (per-strategy turn ladder), adapt-on-refusal, and
+  best-of-N candidate selection, with a live per-strategy caption explaining what
+  Auto-escalate does for the current strategy.
+- **Judge / critic pass.** An optional second model scores each target reply for a breach
+  (severity + rationale), shown as a badge in a new adversarial transcript viewer.
+- **Attack-library flywheel.** Harvests breached probes and re-injects them as few-shot
+  examples; viewer with tags, tag filtering, and JSON import/export.
+- **Safety controls.** Cost cap (hard stop), request-rate throttle (waits, doesn't abort),
+  and a non-destructive content filter that flags secret/PII-shaped replies.
 - **Conversation Forensics — guardrail-failure triage.** A cost-aware triage cascade that
   classifies where and how a target chatbot's guardrails failed, per turn and across the
   episode, mapped to the OWASP LLM Top 10:2025.
@@ -26,6 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Note: the shipped forensics code is a reference implementation — interfaces and routing
 > logic. Judge models, the calibration dataset, and validator/store internals are tracked as
 > follow-up work (and, where applicable, a private asset).
+
+### Changed
+- Scenario testing now uses the Ollama `/api/chat` endpoint (was legacy `/api/generate`),
+  with smarter endpoint normalization and actionable 405 diagnostics.
+
+### Security
+- **All secrets now live in the Keychain only.** Scenario target-bot credentials and the
+  judge provider key are moved to the macOS Keychain (device-only,
+  `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`) and blanked from persisted configs and
+  exports; keys are re-hydrated from the Keychain at run time. A one-time migration moves any
+  previously inline-stored secrets out of UserDefaults on first launch.
+- Removed debug logging that could write endpoints, request bodies, and imported config JSON
+  (including credentials) to the system log.
 
 ---
 

@@ -275,40 +275,51 @@ class CommunicationManager {
     ///   - bot: Bot configuration with endpoint and auth
     /// - Returns: BotResponse with content and timing
     /// - Throws: TestError if URL invalid, HTTP error, or parsing fails
+    /// Returns true if the bot should be treated as an Ollama instance.
+    /// Trusts an explicit `.ollama` provider; otherwise pattern-matches the endpoint
+    /// against the well-known local Ollama hosts. Used to gate Ollama-specific
+    /// request/response shapes in one place instead of repeating the check.
+    private func isOllamaBot(_ bot: BotConfig) -> Bool {
+        if bot.provider == .ollama { return true }
+        return bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434")
+    }
+
+    /// Resolves a user-supplied Ollama endpoint to a chat-completions URL.
+    ///
+    /// Behavior:
+    /// - If the endpoint already contains an `/api/...` path (e.g. `/api/chat`,
+    ///   `/api/generate`, `/api/tags`), it's used verbatim — the user knows what
+    ///   they want and we shouldn't smash a second `/api/...` segment onto it.
+    /// - Otherwise we treat the endpoint as a base URL and append `/api/chat`.
+    ///
+    /// This fixes a class of misconfigurations where the previous code blindly
+    /// appended `/api/generate`, producing URLs like
+    /// `http://localhost:11434/api/chat/api/generate` (a 404) when the user pasted
+    /// a path that already worked elsewhere in the app.
+    private func ollamaEndpointURL(for bot: BotConfig) -> String {
+        let trimmed = bot.endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let url = URL(string: trimmed), url.path.hasPrefix("/api/") {
+            return trimmed
+        }
+        let base = trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
+        return base + "/api/chat"
+    }
+
     private func sendHTTPMessage(_ message: String, to bot: BotConfig) async throws -> BotResponse {
         // Determine the correct endpoint URL for the provider
-        let endpointURL: String
-        if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
-            // Ollama requires the /api/generate endpoint
-            if bot.endpoint.hasSuffix("/api/generate") {
-                endpointURL = bot.endpoint
-            } else {
-                endpointURL = bot.endpoint.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/api/generate"
-            }
-        } else {
-            // Generic bots use the endpoint as-is
-            endpointURL = bot.endpoint
-        }
-        
-        // Debug logging to help troubleshoot
-        print("DEBUG: Bot provider: \(bot.provider?.rawValue ?? "nil")")
-        print("DEBUG: Bot endpoint: \(bot.endpoint)")
-        print("DEBUG: Constructed endpointURL: \(endpointURL)")
-        
+        let isOllama = isOllamaBot(bot)
+        let endpointURL = isOllama ? ollamaEndpointURL(for: bot) : bot.endpoint
+
         // Validate endpoint URL
         guard let url = URL(string: endpointURL) else {
-            print("DEBUG: Invalid URL: \(endpointURL)")
             throw TestError.invalidEndpoint
         }
-        
+
         // Create HTTP POST request
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        print("DEBUG: HTTP Method: \(request.httpMethod ?? "nil")")
-        print("DEBUG: Content-Type: \(request.value(forHTTPHeaderField: "Content-Type") ?? "nil")")
-        
+
         // Add authentication based on type
         if let auth = bot.authentication {
             switch auth.type {
@@ -332,68 +343,49 @@ class CommunicationManager {
         
         // Create JSON request body based on provider type
         let requestBody: [String: Any]
-        
-        // Check if this is an Ollama endpoint and format request accordingly
-        if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
-            // Ollama API format: requires model and prompt fields
-            // Use default model if not specified in config
-            let model = bot.model ?? "llama2"
+
+        if isOllama {
+            // Ollama /api/chat format: model + messages array. Switched from the
+            // legacy /api/generate (prompt string) so scenario tests use the same
+            // endpoint shape as the adversarial connector, and so multi-turn
+            // additions later can pass full conversation state without changing
+            // the wire format.
+            let model = bot.model ?? "llama3.2"
             requestBody = [
                 "model": model,
-                "prompt": message,
+                "messages": [["role": "user", "content": message]],
                 "stream": false
             ]
-            print("DEBUG: Using Ollama request format with model: \(model)")
         } else {
             // Generic chatbot format: simple message field
             requestBody = ["message": message]
-            print("DEBUG: Using generic request format")
         }
-        
-        print("DEBUG: Request body: \(requestBody)")
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-            print("DEBUG: Request body serialized successfully")
-        } catch {
-            print("DEBUG: Failed to serialize request body: \(error)")
-            throw error
-        }
-        
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
         // Send request and measure response time
         let startTime = Date()
-        print("DEBUG: Sending request to: \(url)")
-        
+
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             let responseTime = Date().timeIntervalSince(startTime)
-            
-            // Log response details
-            if let httpResponse = response as? HTTPURLResponse {
-                print("DEBUG: HTTP Status Code: \(httpResponse.statusCode)")
-                print("DEBUG: Response Headers: \(httpResponse.allHeaderFields)")
-                print("DEBUG: Response Time: \(responseTime)s")
-            }
-            
+
             // Check for HTTP errors
             guard let httpResponse = response as? HTTPURLResponse,
                   200...299 ~= httpResponse.statusCode else {
                 let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                print("DEBUG: HTTP Error - Status Code: \(statusCode)")
-                if let httpResponse = response as? HTTPURLResponse {
-                    print("DEBUG: Error Response Headers: \(httpResponse.allHeaderFields)")
+                // Read up to a few KB of the body so the user sees what the server
+                // actually said (Ollama's 404 for unknown models is informative).
+                let body = String(data: data, encoding: .utf8).map {
+                    $0.count > 512 ? String($0.prefix(512)) + "…" : $0
                 }
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print("DEBUG: Error Response Body: \(responseString)")
-                }
-                throw TestError.httpError(statusCode: statusCode)
+                throw TestError.httpError(statusCode: statusCode, body: body, url: url.absoluteString)
             }
             
             // Continue with successful response processing
             return try await processSuccessfulResponse(data: data, responseTime: responseTime, bot: bot)
             
         } catch {
-            print("DEBUG: Network error: \(error)")
             throw error
         }
     }
@@ -408,22 +400,26 @@ class CommunicationManager {
     /// - Returns: BotResponse with parsed content
     /// - Throws: TestError if JSON parsing fails
     private func processSuccessfulResponse(data: Data, responseTime: Double, bot: BotConfig) async throws -> BotResponse {
-        // Parse JSON response based on provider type
-        // Ollama returns {"response": "text"} format
-        // Generic bots may return {"response": "text"} or other formats
+        // Parse JSON response based on provider type.
+        // - Ollama /api/chat:     {"message": {"role": "assistant", "content": "..."}, ...}
+        // - Ollama /api/generate: {"response": "..."}   (kept for users who pinned the legacy path)
+        // - Generic bots:         {"response": "..."} or {"message": "..."}
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        
+
         let content: String
-        if bot.endpoint.contains("localhost:11434") || bot.endpoint.contains("127.0.0.1:11434") || bot.provider == .ollama {
-            // Ollama response format: {"response": "bot message"}
-            content = json?["response"] as? String ?? String(data: data, encoding: .utf8) ?? ""
-            print("DEBUG: Ollama response content: \(content)")
+        if isOllamaBot(bot) {
+            if let messageObj = json?["message"] as? [String: Any],
+               let chatContent = messageObj["content"] as? String {
+                content = chatContent
+            } else {
+                // Fallback: /api/generate response shape, or raw body if neither matches.
+                content = json?["response"] as? String ?? String(data: data, encoding: .utf8) ?? ""
+            }
         } else {
             // Generic bot response: try "response" field first, then "message", then raw data
-            content = json?["response"] as? String ?? 
-                     json?["message"] as? String ?? 
+            content = json?["response"] as? String ??
+                     json?["message"] as? String ??
                      String(data: data, encoding: .utf8) ?? ""
-            print("DEBUG: Generic response content: \(content)")
         }
         
         return BotResponse(
@@ -605,11 +601,6 @@ class ResponseValidator {
         let passed = similarity >= threshold
         
         // Debug logging for semantic similarity
-        print("DEBUG SEMANTIC: Expected: '\(expected)'")
-        print("DEBUG SEMANTIC: Actual: '\(response.content)'")
-        print("DEBUG SEMANTIC: Similarity: \(similarity)")
-        print("DEBUG SEMANTIC: Threshold: \(threshold)")
-        print("DEBUG SEMANTIC: Passed: \(passed)")
         
         return ValidationResult(
             passed: passed,
@@ -708,16 +699,12 @@ class ResponseValidator {
     /// - Returns: Similarity score (0.0-1.0)
     private func calculateSemanticSimilarity(_ text1: String, _ text2: String) -> Double {
         // Debug logging
-        print("DEBUG SIMILARITY: Text1: '\(text1)'")
-        print("DEBUG SIMILARITY: Text2: '\(text2)'")
         
         // Try to use NaturalLanguage framework for semantic analysis
         guard let embedding = NLEmbedding.wordEmbedding(for: .english) else {
-            print("DEBUG SIMILARITY: Embedding not available, using fallback")
             return calculateSimpleSimilarity(text1, text2)
         }
         
-        print("DEBUG SIMILARITY: Embedding available: true")
         
         // Clean and normalize text for better embedding results
         let cleanText1 = text1.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -734,13 +721,9 @@ class ResponseValidator {
               let vector2 = embedding.vector(for: cleanText2),
               vector1.count > 0 && vector2.count > 0 else {
             // Fallback to simple word overlap if embeddings not available
-            print("DEBUG SIMILARITY: Using fallback simple similarity (embeddings failed)")
             return calculateSimpleSimilarity(text1, text2)
         }
         
-        print("DEBUG SIMILARITY: Using NaturalLanguage embeddings")
-        print("DEBUG SIMILARITY: Vector1 length: \(vector1.count)")
-        print("DEBUG SIMILARITY: Vector2 length: \(vector2.count)")
         
         // Calculate cosine similarity between vectors
         // Cosine similarity measures angle between vectors (0 = orthogonal, 1 = same direction)
@@ -757,22 +740,16 @@ class ResponseValidator {
         magnitude1 = sqrt(magnitude1)
         magnitude2 = sqrt(magnitude2)
         
-        print("DEBUG SIMILARITY: Dot product: \(dotProduct)")
-        print("DEBUG SIMILARITY: Magnitude1: \(magnitude1)")
-        print("DEBUG SIMILARITY: Magnitude2: \(magnitude2)")
         
         // Check for zero vectors
         guard magnitude1 > 0 && magnitude2 > 0 else {
-            print("DEBUG SIMILARITY: Zero vector detected, using fallback")
             return calculateSimpleSimilarity(text1, text2)
         }
         
         let cosineSimilarity = dotProduct / (magnitude1 * magnitude2)
-        print("DEBUG SIMILARITY: Cosine similarity: \(cosineSimilarity)")
         
         // Normalize to 0-1 range (cosine similarity ranges from -1 to 1)
         let normalizedSimilarity = (cosineSimilarity + 1) / 2
-        print("DEBUG SIMILARITY: Normalized similarity: \(normalizedSimilarity)")
         
         return normalizedSimilarity
     }
@@ -785,7 +762,6 @@ class ResponseValidator {
     ///   - embedding: NaturalLanguage embedding
     /// - Returns: Maximum similarity found
     private func calculateWordBasedSimilarity(_ text1: String, _ text2: String, embedding: NLEmbedding) -> Double {
-        print("DEBUG SIMILARITY: Using word-based similarity for short expected text")
         
         // Split both texts into words
         let words1 = text1.split(separator: " ").map { String($0).lowercased() }
@@ -817,7 +793,6 @@ class ResponseValidator {
             maxSimilarity = max(maxSimilarity, bestWordSimilarity)
         }
         
-        print("DEBUG SIMILARITY: Word-based max similarity: \(maxSimilarity)")
         return maxSimilarity
     }
     
@@ -858,20 +833,13 @@ class ResponseValidator {
         let words1 = Set(text1.lowercased().components(separatedBy: separators).filter { !$0.isEmpty && $0.count > 1 })
         let words2 = Set(text2.lowercased().components(separatedBy: separators).filter { !$0.isEmpty && $0.count > 1 })
         
-        print("DEBUG SIMPLE SIMILARITY: Words1: \(Array(words1).sorted())")
-        print("DEBUG SIMPLE SIMILARITY: Words2: \(Array(words2).sorted())")
         
         // Calculate Jaccard similarity: |intersection| / |union|
         let intersection = words1.intersection(words2)
         let union = words1.union(words2)
         
-        print("DEBUG SIMPLE SIMILARITY: Intersection: \(Array(intersection).sorted())")
-        print("DEBUG SIMPLE SIMILARITY: Union: \(Array(union).sorted())")
-        print("DEBUG SIMPLE SIMILARITY: Intersection count: \(intersection.count)")
-        print("DEBUG SIMPLE SIMILARITY: Union count: \(union.count)")
         
         guard !union.isEmpty else { 
-            print("DEBUG SIMPLE SIMILARITY: Empty union, returning 0.0")
             return 0.0 
         }
         
@@ -927,10 +895,6 @@ class ResponseValidator {
         let semanticBonus = Double(semanticMatches) / Double(words2.count) * 0.3 // Weight semantic matches less
         let finalSimilarity = min(1.0, jaccardSimilarity + semanticBonus)
         
-        print("DEBUG SIMPLE SIMILARITY: Jaccard similarity: \(jaccardSimilarity)")
-        print("DEBUG SIMPLE SIMILARITY: Semantic matches: \(semanticMatches)")
-        print("DEBUG SIMPLE SIMILARITY: Semantic bonus: \(semanticBonus)")
-        print("DEBUG SIMPLE SIMILARITY: Final similarity: \(finalSimilarity)")
         
         return finalSimilarity
     }
@@ -977,11 +941,13 @@ class ResponseValidator {
 enum TestError: Error, LocalizedError {
     case notConnected                   // Not connected to bot
     case invalidEndpoint                // Invalid URL
-    case httpError(statusCode: Int)     // HTTP error with status code
+    /// HTTP-level failure. `body` and `url` are best-effort context so the user
+    /// can diagnose without enabling debug logging. `body` is truncated upstream.
+    case httpError(statusCode: Int, body: String? = nil, url: String? = nil)
     case notImplemented(String)         // Feature not yet implemented
     case timeout                        // Request timed out
     case validationFailed(String)       // Validation failed with reason
-    
+
     /// Human-readable error description
     var errorDescription: String? {
         switch self {
@@ -989,8 +955,18 @@ enum TestError: Error, LocalizedError {
             return "Not connected to bot"
         case .invalidEndpoint:
             return "Invalid bot endpoint"
-        case .httpError(let statusCode):
-            return "HTTP error: \(statusCode)"
+        case .httpError(let statusCode, let body, let url):
+            var parts: [String] = ["HTTP error: \(statusCode)"]
+            // 405 from a chat endpoint almost always means the URL path doesn't
+            // accept POST — common when a user pastes a base URL or a GET-only
+            // path (Ollama's root returns 405 to POST, for instance). Surface a
+            // targeted hint instead of the bare status code.
+            if statusCode == 405 {
+                parts.append("the endpoint rejected POST. For Ollama use /api/chat (or /api/generate); for other servers verify the path accepts POST.")
+            }
+            if let url = url { parts.append("URL: \(url)") }
+            if let body = body, !body.isEmpty { parts.append("Body: \(body)") }
+            return parts.joined(separator: " — ")
         case .notImplemented(let feature):
             return "Feature not implemented: \(feature)"
         case .timeout:

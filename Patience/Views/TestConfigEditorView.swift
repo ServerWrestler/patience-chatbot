@@ -61,8 +61,8 @@ struct TestConfigEditorView: View {
     /// Type of authentication (bearer, apiKey, basic, oauth)
     @State private var authType: AuthType = .bearer
     
-    /// API key or token for authentication
-    /// Stored securely via KeychainManager
+    /// API key or token for authentication. On save, AppState moves this into the Keychain
+    /// (via KeychainManager) and blanks it in the persisted config; it's re-hydrated at run time.
     @State private var authCredentials = ""
     
     // MARK: - Scenarios State
@@ -251,7 +251,7 @@ struct TestConfigEditorView: View {
                                         .frame(maxWidth: 500)
                                 }
                                 
-                                Text("Credentials are stored securely and never logged")
+                                Text("Stored in the macOS Keychain (device-only) — kept out of saved configs and exports.")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -983,130 +983,6 @@ struct ScenarioCard: View {
     }
 }
 
-/// Detail view showing test results
-/// Displays summary metrics and individual scenario results
-/// 
-/// Shows:
-/// - Test run ID and start time
-/// - Summary: Total/Passed/Failed counts
-/// - Individual scenario results with pass/fail status
-/// - Duration for each scenario
-/// - Error messages if any
-struct TestResultDetailView: View {
-    let result: TestResults
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Result header
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Test Results")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("Run ID: \(result.testRunId)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("Started: \(formatDate(result.startTime))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                // Summary
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 16) {
-                    MetricCard(title: "Total", value: "\(result.summary.total)")
-                    MetricCard(title: "Passed", value: "\(result.summary.passed)")
-                    MetricCard(title: "Failed", value: "\(result.summary.failed)")
-                }
-                
-                // Scenario results
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Scenario Results")
-                        .font(.headline)
-                    
-                    LazyVStack(spacing: 8) {
-                        ForEach(result.scenarioResults) { scenarioResult in
-                            ScenarioResultCard(result: scenarioResult)
-                        }
-                    }
-                }
-            }
-            .padding()
-        }
-        .navigationTitle("Test Results")
-#if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-#endif
-    }
-    
-    /// Formats date for display
-    /// Shows medium date style and short time style
-    /// 
-    /// - Parameter date: Date to format
-    /// - Returns: Formatted string like "Jan 15, 2024 at 2:30 PM"
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
-
-/// Card displaying a single scenario result
-/// Shows pass/fail status, scenario name, duration, and errors
-/// Used in TestResultDetailView to list all scenario results
-struct ScenarioResultCard: View {
-    let result: ScenarioResult
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: result.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundColor(result.passed ? .green : .red)
-                
-                Text(result.scenarioName)
-                    .font(.headline)
-                
-                Spacer()
-                
-                Text(formatDuration(result.duration))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            if let error = result.error {
-                Text("Error: \(error)")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(4)
-            }
-            
-            Text("Messages: \(result.conversationHistory.messages.count)")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(Color(.controlBackgroundColor))
-        .cornerRadius(8)
-    }
-    
-    /// Formats duration for display
-    /// Shows milliseconds if < 1 second, otherwise seconds
-    /// 
-    /// - Parameter duration: Duration in seconds
-    /// - Returns: Formatted string like "500ms" or "2.5s"
-    private func formatDuration(_ duration: Double) -> String {
-        if duration < 1 {
-            return String(format: "%.0fms", duration * 1000)
-        } else {
-            return String(format: "%.1fs", duration)
-        }
-    }
-}
 
 /// SwiftUI preview for TestConfigEditorView
 /// Shows the editor in create mode with empty AppState
