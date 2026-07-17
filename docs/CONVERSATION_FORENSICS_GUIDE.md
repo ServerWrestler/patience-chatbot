@@ -19,15 +19,22 @@ Import production logs to surface failure patterns, policy violations, and conve
 
 ### JSON Format (Recommended)
 
+A JSON array of messages. Each message needs an `id` (UUID), a `sender`, `content`, and an
+ISO-8601 `timestamp`. **`sender` must be one of `patience` (the tester), `target` (the bot
+under test), or `adversarial`** — the older `user`/`bot` values are not accepted and will fail
+to parse.
+
 ```json
 [
   {
-    "sender": "user",
+    "id": "11111111-1111-1111-1111-111111111111",
+    "sender": "patience",
     "content": "Hello, I need help with my order",
     "timestamp": "2025-01-15T10:00:00Z"
   },
   {
-    "sender": "bot",
+    "id": "22222222-2222-2222-2222-222222222222",
+    "sender": "target",
     "content": "Hi! I'd be happy to help. What's your order number?",
     "timestamp": "2025-01-15T10:00:02Z"
   }
@@ -71,7 +78,7 @@ Let me look that up for you.
 
 | Pattern Type | What It Detects |
 |-------------|-----------------|
-| `greeting` | Conversations starting with common greeting words |
+| `greeting` | Conversations where a tester message contains a common greeting word |
 | `question` | Messages containing question marks |
 | `error` | Bot responses containing error-related words (sorry, can't, failed, etc.) |
 

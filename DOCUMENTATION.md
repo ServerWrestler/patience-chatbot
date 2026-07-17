@@ -14,7 +14,7 @@
 | Guide | Status | Description |
 |-------|--------|-------------|
 | [Scenario Testing](docs/SCENARIO_TESTING_GUIDE.md) | ✅ Implemented | Scenario-based chatbot testing |
-| [Adversarial Testing](docs/ADVERSARIAL_TESTING_GUIDE.md) | ✅ Implemented | AI-powered automated testing |
+| [Adversarial Testing](docs/ADVERSARIAL_TESTING_GUIDE.md) | ✅ Implemented | AI-powered automated testing — Red Team strategy, adaptive probing, judge/critic scoring, attack-library flywheel |
 | [Adversarial Prompts](docs/ADVERSARIAL_TESTING_PROMPTS.md) | ✅ Reference | OWASP/MITRE attack patterns |
 | [Conversation Forensics](docs/CONVERSATION_FORENSICS_GUIDE.md) | ✅ Implemented | Historical conversation analysis and pattern detection |
 | [Conversation Forensics — Triage](docs/CONVERSATION_FORENSICS_TRIAGE_GUIDE.md) | ⚠️ Reference impl | Guardrail-failure classification via a local→frontier triage cascade (OWASP LLM Top 10) |

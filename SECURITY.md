@@ -10,10 +10,13 @@
 ## Security Features
 
 - **Local Processing**: All analysis happens on your Mac
-- **Keychain Storage**: API keys encrypted via macOS Keychain
+- **Keychain Storage**: API keys and target-bot credentials are stored in the macOS Keychain
+  (device-only), kept out of saved configs, UserDefaults, and exported files
 - **No Data Collection**: No telemetry or user tracking
-- **HTTPS Enforcement**: All external requests use TLS
-- **App Sandbox**: Restricted system access
+- **TLS When Provided**: Requests use TLS when the endpoint is `https://`. Patience does not
+  force HTTPS — local targets (e.g. Ollama on `http://localhost`) are plain HTTP by design.
+  Point at `https://` endpoints for any traffic leaving your machine.
+- **App Sandbox**: Restricted system access (outgoing network + user-selected files entitlements)
 
 ## Reporting Vulnerabilities
 
@@ -39,7 +42,7 @@ Include:
 - Use minimal permissions
 
 ### Network
-- Use HTTPS endpoints only
+- Prefer HTTPS endpoints for anything beyond localhost (Patience does not enforce the scheme)
 - Review data sent to external services
 
 ### Testing

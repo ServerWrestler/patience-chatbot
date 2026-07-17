@@ -57,6 +57,8 @@ Patience/                       # Swift source
 ├── Core/        TestExecutor, AdversarialTestOrchestrator, AnalysisEngine,
 │   │            ReportGenerator, KeychainManager, CustomValidators
 │   └── Forensics/  ForensicsTriage, EpisodeForensics, FlywheelStore  # triage cascade
+│                   # NB: Forensics/FlywheelStore (judge fine-tuning) is UNRELATED to the
+│                   # adversarial "attack-library flywheel" (AttackLibraryEntry in Types.swift)
 ├── Views/       SwiftUI views, one per feature (suffix "View")
 ├── ContentView.swift, PatienceApp.swift
 └── Patience.entitlements
